@@ -10,9 +10,20 @@ import { CATALOG } from "@/fees/catalog";
  * by the same engine as the calculator, so the article and the tool can never disagree.
  */
 
-function formatDate(iso: string) {
+/** "2026-06-22" → "June 22, 2026"; "2025-09" (month precision) → "September 2025". */
+export function formatChangeDate(iso: string) {
+  if (/^\d{4}-\d{2}$/.test(iso)) return new Date(`${iso}-15T12:00:00Z`).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }
+const formatDate = formatChangeDate;
+
+/** Rates under 10% keep two decimals so 2.99% doesn't read as 3.0%. */
+function rateText(r: number) {
+  const p = r * 100;
+  return `${p < 10 ? p.toFixed(2) : p.toFixed(1)}%`;
+}
+
+const BUYER: Record<string, string> = { marketplaces: "Buyer", payments: "Payer", freelance: "Client", rentals: "Guest", creators: "Buyer", fundraising: "Donors" };
 
 export function Callout({ children, title }: { children: ReactNode; title?: string }) {
   return (
@@ -46,10 +57,10 @@ export function FeeSchedule({ def, market }: { def: CalculatorDef; market?: stri
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => {
+            {rows.map((r, i) => {
               const s = src(r.source);
               return (
-                <tr key={r.fee}>
+                <tr key={`${i}-${r.fee}`}>
                   <td>{r.fee}</td>
                   <td className="tnum whitespace-nowrap text-ink">{r.amount}</td>
                   <td>{r.appliesTo}</td>
@@ -72,7 +83,7 @@ export function FeeSchedule({ def, market }: { def: CalculatorDef; market?: stri
 }
 
 /** "How much do you keep at $10, $25, $50…": the long-tail questions answered with live numbers. */
-export function PayoutExamples({ def, prices, market, with: extra, caption }: { def: CalculatorDef; prices: number[]; market?: string; with?: Partial<Inputs>; caption?: string }) {
+export function PayoutExamples({ def, prices, market, with: extra, caption, label }: { def: CalculatorDef; prices: number[]; market?: string; with?: Partial<Inputs>; caption?: string; label?: string }) {
   const m = pickMarket(def.markets, market, def.defaultMarket);
   const base = { ...def.defaults(m), ...extra } as Inputs;
   const money = (c: number) => formatMoney(c, m.currency, m.locale);
@@ -87,7 +98,7 @@ export function PayoutExamples({ def, prices, market, with: extra, caption }: { 
         <table className="data-table min-w-[480px]">
           <thead>
             <tr>
-              <th>{def.priceNoun[0].toUpperCase() + def.priceNoun.slice(1)}</th>
+              <th>{label ?? def.priceNoun[0].toUpperCase() + def.priceNoun.slice(1)}</th>
               <th className="num">Total fees</th>
               <th className="num">Fee rate</th>
               <th className="num">You keep</th>
@@ -98,7 +109,7 @@ export function PayoutExamples({ def, prices, market, with: extra, caption }: { 
               <tr key={p}>
                 <td className="tnum">{money(Math.round(p * 100))}</td>
                 <td className="num">{money(r.totalFees)}</td>
-                <td className="num">{(r.effectiveRate * 100).toFixed(1)}%</td>
+                <td className="num">{rateText(r.effectiveRate)}</td>
                 <td className="num font-[600] text-ink">{money(r.payout)}</td>
               </tr>
             ))}
@@ -135,7 +146,7 @@ export function MarketTable({ def, price, with: extra }: { def: CalculatorDef; p
                   </td>
                   <td className="num">{money(r.saleAmount)}</td>
                   <td className="num">
-                    {money(r.totalFees)} <span className="text-[0.78rem] text-ink-4">{(r.effectiveRate * 100).toFixed(1)}%</span>
+                    {money(r.totalFees)} <span className="text-[0.78rem] text-ink-4">{rateText(r.effectiveRate)}</span>
                   </td>
                   <td className="num font-[600] text-ink">{money(r.payout)}</td>
                 </tr>
@@ -153,23 +164,42 @@ export function Example({ def, market, with: extra }: { def: CalculatorDef; mark
   const m = pickMarket(def.markets, market, def.defaultMarket);
   const r = def.calculate({ ...def.defaults(m), ...extra } as Inputs, m);
   const money = (c: number) => formatMoney(c, m.currency, m.locale);
+  const buyer = def.buyerNoun ? def.buyerNoun[0].toUpperCase() + def.buyerNoun.slice(1) : BUYER[def.category] ?? "Buyer";
+  const signed = (c: number) => (c < 0 ? `+${money(-c)}` : c === 0 ? money(0) : `−${money(c)}`);
   return (
     <div className="float not-prose my-8 px-5 py-5 sm:px-6">
       <div className="eyebrow mb-2">Worked example</div>
       <ul className="divide-y divide-line">
+        {r.buyerFees.length > 0 && (
+          <>
+            <li className="flex justify-between gap-3 py-2 text-[0.93rem]">
+              <span className="text-ink-2">{buyer} pays in total</span>
+              <span className="tnum text-ink">{money(r.buyerPays)}</span>
+            </li>
+            {r.buyerFees.map((l) => (
+              <li key={`b-${l.id}`} className="flex justify-between gap-3 py-2 text-[0.9rem]">
+                <span className="text-ink-3">
+                  of which {l.label.charAt(0).toLowerCase() + l.label.slice(1)} (paid by the {buyer.toLowerCase()})
+                  {l.detail && <span className="tnum ml-2 text-[0.82rem] text-ink-4">{l.detail}</span>}
+                </span>
+                <span className="tnum text-ink-3">{money(l.amount)}</span>
+              </li>
+            ))}
+          </>
+        )}
         <li className="flex justify-between gap-3 py-2 text-[0.95rem]">
-          <span className="text-ink">Buyer pays</span>
-          <span className="tnum font-[560] text-ink">{money(r.buyerPays)}</span>
+          <span className="text-ink">{r.buyerFees.length ? "Sale amount" : `${buyer} pays`}</span>
+          <span className="tnum font-[560] text-ink">{money(r.buyerFees.length ? r.saleAmount : r.buyerPays)}</span>
         </li>
         {r.fees
-          .filter((l) => l.amount)
+          .filter((l) => l.amount || l.explain)
           .map((l) => (
             <li key={l.id} className="flex justify-between gap-3 py-2 text-[0.93rem]">
               <span className="text-ink-2">
                 {l.label}
                 {l.detail && <span className="tnum ml-2 text-[0.82rem] text-ink-4">{l.detail}</span>}
               </span>
-              <span className="tnum text-ink">−{money(l.amount)}</span>
+              <span className="tnum text-ink">{signed(l.amount)}</span>
             </li>
           ))}
         <li className="flex justify-between gap-3 py-2 text-[0.98rem]">
@@ -183,6 +213,7 @@ export function Example({ def, market, with: extra }: { def: CalculatorDef; mark
 
 export function ChangeLog({ def }: { def: CalculatorDef }) {
   if (!def.changes.length) return null;
+  const today = new Date().toISOString().slice(0, 10);
   const sorted = [...def.changes].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <ol className="not-prose my-8 space-y-3">
@@ -192,7 +223,7 @@ export function ChangeLog({ def }: { def: CalculatorDef }) {
           <li key={`${c.date}-${c.text.slice(0, 20)}`} className="float flex gap-4 px-5 py-4">
             <div className="w-[104px] flex-none">
               <div className="tnum text-[0.86rem] font-[600] text-ink">{formatDate(c.date)}</div>
-              {c.upcoming && <div className="mt-1 inline-block rounded-full bg-warn-soft px-2 py-0.5 text-[0.7rem] font-[650] uppercase tracking-wide text-warn">Upcoming</div>}
+              {c.date > today && <div className="mt-1 inline-block rounded-full bg-warn-soft px-2 py-0.5 text-[0.7rem] font-[650] uppercase tracking-wide text-warn">Upcoming</div>}
             </div>
             <div className="text-[0.94rem] leading-relaxed text-ink-2">
               {c.text}

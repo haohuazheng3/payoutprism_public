@@ -11,7 +11,7 @@ import { BigMoney, Breakdown, Notices, SpectrumBar } from "./ResultCard";
 import { PriceLadder } from "./PriceLadder";
 import { Feedback } from "./Feedback";
 import { pushRecent } from "./recent";
-import { currencySymbol, decodeState, encodeState, visibleFields } from "./util";
+import { currencySymbol, decodeState, encodeState, saleNoun, visibleFields } from "./util";
 
 const SECTION_TITLE: Record<FieldSection, string> = {
   sale: "The sale",
@@ -169,7 +169,15 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
   };
 
   const sections: FieldSection[] = ["sale", "shipping", "options", "costs"];
-  const bySection = (s: FieldSection) => fields.filter((f) => f.section === s && !(f.id === def.priceField));
+  // A section with nothing but advanced fields would show a bare heading: fold those into "Options".
+  const lonely = new Set<FieldSection>(
+    (["shipping", "costs"] as FieldSection[]).filter((s) => {
+      const list = fields.filter((f) => f.section === s && f.id !== def.priceField);
+      return list.length > 0 && list.every((f) => f.advanced) && s !== "costs";
+    }),
+  );
+  const sectionOf = (f: FieldDef): FieldSection => (lonely.has(f.section) ? "options" : f.section);
+  const bySection = (s: FieldSection) => fields.filter((f) => sectionOf(f) === s && !(f.id === def.priceField));
   const isDefault = (f: FieldDef) => inputs[f.id] === def.defaults(market)[f.id];
 
   const priceCents = mode === "price" ? solved?.price ?? null : toCents(inputs[def.priceField]);
@@ -211,7 +219,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
   );
 
   return (
-    <div className="grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6">
+    <div className="grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6" data-ready={restored ? "1" : undefined}>
       {/* ---------------- inputs ---------------- */}
       <div className="float min-w-0 p-5 sm:p-7 lg:col-span-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -275,7 +283,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
             <section key={s} className={s === "sale" ? "mt-6" : "mt-7"} aria-label={SECTION_TITLE[s]}>
               {s !== "sale" && (
                 <div className="mb-3 flex items-center justify-between">
-                  <h3 className="eyebrow">{SECTION_TITLE[s]}</h3>
+                  <h2 className="eyebrow">{SECTION_TITLE[s]}</h2>
                 </div>
               )}
               {s === "sale" && <div className={list.length ? "mb-4" : ""}>{heroBlock}</div>}
@@ -290,7 +298,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
                 >
                   <span>
                     <span className="block text-[0.95rem] font-[580] text-ink">Add your costs to see profit</span>
-                    <span className="block text-[0.84rem] text-ink-3">Item cost, postage, packaging. Optional.</span>
+                    <span className="block text-[0.84rem] text-ink-3">{def.costsHint ?? "Item cost, postage, packaging. Optional."}</span>
                   </span>
                   <span aria-hidden className="grid h-8 w-8 flex-none place-items-center rounded-full bg-card text-ink shadow-[0_0_0_1px_var(--line-2)]">
                     +
@@ -336,7 +344,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
         <div className="float p-5 sm:p-7" aria-live="polite" aria-atomic="false">
           {result ? (
             <>
-              <div className="eyebrow">{mode === "price" ? `Charge this ${def.priceNoun}` : result.profit !== null ? "Your profit" : "You keep"}</div>
+              <div className="eyebrow">{mode === "price" ? def.reverseHead ?? `Charge this ${def.priceNoun}` : result.profit !== null ? "Your profit" : "You keep"}</div>
               <div className="mt-2 text-[3.1rem] leading-none text-ink sm:text-[3.6rem]">
                 <BigMoney cents={mode === "price" ? solved?.price ?? 0 : result.profit ?? result.payout} market={market} className={result.profit !== null && result.profit < 0 && mode !== "price" ? "text-bad" : ""} />
               </div>
@@ -356,7 +364,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
                   </>
                 ) : (
                   <>
-                    from a <span className="font-[600] text-ink">{money(result.saleAmount)}</span> sale · fees take{" "}
+                    from a <span className="font-[600] text-ink">{money(result.saleAmount)}</span> {saleNoun(def)} · fees take{" "}
                     <span className="font-[600] text-ink">{money(result.totalFees)}</span> ({(result.effectiveRate * 100).toFixed(1)}%)
                   </>
                 )}
@@ -388,7 +396,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
             </>
           ) : (
             <div>
-              <div className="eyebrow">Charge this {def.priceNoun}</div>
+              <div className="eyebrow">{def.reverseHead ?? `Charge this ${def.priceNoun}`}</div>
               <p className="mt-3 text-[0.95rem] leading-relaxed text-ink-2">
                 No {def.priceNoun} up to {money(100_000_000)} reaches that target with these settings. Lower the target or your costs.
               </p>
@@ -417,7 +425,6 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
           type="button"
           className="pill fixed inset-x-3 bottom-3 z-30 flex items-center justify-between gap-3 px-5 py-3 text-left animate-rise safe-bottom lg:hidden"
           onClick={() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-          aria-label="Show the full breakdown"
         >
           <span className="min-w-0">
             <span className="block text-[0.72rem] font-[600] uppercase tracking-[0.12em] text-ink-3">{mode === "price" ? "Charge" : result.profit !== null ? "Profit" : "You keep"}</span>

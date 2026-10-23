@@ -20,12 +20,21 @@ export interface CompareRow {
   byKind: Record<string, number>;
 }
 
+/**
+ * Not ranked against shipping marketplaces, because the comparison would mislead: an own store
+ * (Shopify) brings no buyers and has a monthly plan, and local-pickup-only apps (OfferUp) charge
+ * nothing but can't ship. The compare page explains both instead.
+ */
+export const NOT_RANKED = new Set(["shopify", "offerup"]);
+
 /** Run the same sale through every calculator in a compare group, best payout first. */
 export function compareAll(defs: CalculatorDef[], group: "sell" | "pay", c: CompareInputs): CompareRow[] {
   const rows: CompareRow[] = [];
   for (const def of defs) {
-    if (!def.compare || def.compare.group !== group) continue;
+    if (!def.compare || def.compare.group !== group || NOT_RANKED.has(def.slug)) continue;
     const market = pickMarket(def.markets, def.defaultMarket, def.defaultMarket);
+    // The compare page works in US dollars: a calculator whose default market isn't USD can't be ranked.
+    if (market.currency !== "USD") continue;
     const inputs = { ...def.defaults(market), ...def.compare.map(c) } as Inputs;
     const r = def.calculate(inputs, market);
     const byKind: Record<string, number> = {};

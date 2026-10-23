@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import type { FieldDef, Inputs, InputValue, Market, SelectOption } from "@/fees/types";
-import { currencySymbol, fieldOptions, parseAmount, tidyMoney } from "./util";
+import { currencySymbol, fieldHelp, fieldOptions, parseAmount, tidyMoney } from "./util";
 import { Combobox } from "./Combobox";
 
 interface FieldProps {
@@ -17,7 +17,8 @@ interface FieldProps {
 
 export function Field({ field, value, inputs, market, onChange, hero }: FieldProps) {
   const id = useId();
-  const helpId = field.help ? `${id}-help` : undefined;
+  const help = fieldHelp(field, inputs, market);
+  const helpId = help ? `${id}-help` : undefined;
   const label = (
     <label htmlFor={id} className="mb-1.5 block text-[0.86rem] font-[560] text-ink-2">
       {field.label}
@@ -32,9 +33,9 @@ export function Field({ field, value, inputs, market, onChange, hero }: FieldPro
           <span id={`${id}-l`} className="block text-[0.94rem] font-[560] text-ink">
             {field.label}
           </span>
-          {field.help && (
+          {help && (
             <span id={helpId} className="mt-0.5 block text-[0.84rem] leading-snug text-ink-3">
-              {field.help}
+              {help}
             </span>
           )}
         </div>
@@ -65,9 +66,9 @@ export function Field({ field, value, inputs, market, onChange, hero }: FieldPro
             </button>
           ))}
         </div>
-        {field.help && (
+        {help && (
           <p id={helpId} className="mt-1.5 text-[0.82rem] leading-snug text-ink-3">
-            {field.help}
+            {help}
           </p>
         )}
       </div>
@@ -84,9 +85,9 @@ export function Field({ field, value, inputs, market, onChange, hero }: FieldPro
         ) : (
           <NativeSelect id={id} options={opts} value={String(value ?? "")} onChange={(v) => onChange(field.id, v)} describedBy={helpId} />
         )}
-        {field.help && (
+        {help && (
           <p id={helpId} className="mt-1.5 text-[0.82rem] leading-snug text-ink-3">
-            {field.help}
+            {help}
           </p>
         )}
       </div>
@@ -112,9 +113,9 @@ export function Field({ field, value, inputs, market, onChange, hero }: FieldPro
         hero={hero}
         placeholder={field.kind === "money" ? field.placeholder ?? "0.00" : "0"}
       />
-      {field.help && (
+      {help && (
         <p id={helpId} className="mt-1.5 text-[0.82rem] leading-snug text-ink-3">
-          {field.help}
+          {help}
         </p>
       )}
     </div>

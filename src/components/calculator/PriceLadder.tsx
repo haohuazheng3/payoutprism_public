@@ -46,7 +46,7 @@ export function PriceLadder({ def, inputs, market, onPick }: { def: CalculatorDe
   return (
     <div className="float mt-5 p-5 sm:p-6">
       <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-[1rem] font-[620] text-ink">Nearby prices</h3>
+        <h2 className="text-[1rem] font-[620] text-ink">Nearby prices</h2>
         <span className="text-[0.8rem] text-ink-3">Tap a row to use it</span>
       </div>
       <table className="data-table mt-2 !text-[0.9rem]">

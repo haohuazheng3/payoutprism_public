@@ -77,7 +77,7 @@ export async function CalculatorPage({ slug, children }: { slug: string; childre
 
       <header className="max-w-3xl pb-6 pt-4 sm:pb-10 sm:pt-5">
         <h1 className="display text-[2.1rem] text-ink sm:text-[3.4rem]">{front.h1}</h1>
-        <p className="mt-3 max-w-2xl text-[1rem] leading-relaxed text-ink-3 sm:mt-4 sm:text-[1.15rem]">{front.dek}</p>
+        <p className="mt-3 line-clamp-2 max-w-2xl text-[0.98rem] leading-relaxed text-ink-3 sm:mt-4 sm:line-clamp-none sm:text-[1.15rem]">{front.dek}</p>
       </header>
 
       {children}
@@ -122,7 +122,7 @@ export async function CalculatorPage({ slug, children }: { slug: string; childre
           {front.faq.length > 0 && (
             <section id="faq" className="mt-16" aria-labelledby="faq-h">
               <h2 id="faq-h" className="display text-[1.9rem] text-ink sm:text-[2.1rem]">
-                Questions sellers ask
+                {def.category === "marketplaces" ? "Questions sellers ask" : "Questions people ask"}
               </h2>
               <div className="mt-6 space-y-3">
                 {front.faq.map((f) => (

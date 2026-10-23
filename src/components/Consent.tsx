@@ -73,17 +73,17 @@ export function ConsentManager() {
   if (mode === "hidden") return null;
 
   return (
-    <div className="fixed inset-x-3 bottom-3 z-[60] sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[400px]" role="region" aria-label="Cookie choices">
-      <div className="float animate-rise p-5">
-        <p className="text-[1rem] font-[640] text-ink">{mode === "optin" ? "May we count your visit?" : "About analytics on this site"}</p>
-        <p className="mt-2 text-[0.88rem] leading-relaxed text-ink-3">
-          We use FlowGlance, our only analytics tool, to learn which calculators help. It records page activity, including numbers and text you type into forms.{" "}
+    <div className="fixed inset-x-2 bottom-2 z-[60] sm:inset-x-auto sm:bottom-5 sm:right-5 sm:w-[400px]" role="region" aria-label="Cookie choices">
+      <div className="float animate-rise p-4 sm:p-5">
+        <p className="text-[0.95rem] font-[640] text-ink sm:text-[1rem]">{mode === "optin" ? "May we count your visit?" : "About analytics on this site"}</p>
+        <p className="mt-1.5 text-[0.84rem] leading-snug text-ink-3 sm:mt-2 sm:text-[0.88rem] sm:leading-relaxed">
+          FlowGlance, our only analytics, records page activity, including what you type into forms.{" "}
           {mode === "optin" ? "Nothing loads unless you agree." : "You can opt out any time."}{" "}
           <Link href="/cookie-policy" className="underline underline-offset-4 hover:text-ink">
             Details
           </Link>
         </p>
-        <div className="mt-4 flex gap-2">
+        <div className="mt-3 flex gap-2 sm:mt-4">
           <button type="button" className="btn btn-ink btn-sm flex-1" onClick={accept}>
             {mode === "optin" ? "Allow analytics" : "OK"}
           </button>

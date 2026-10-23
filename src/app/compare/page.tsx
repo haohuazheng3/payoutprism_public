@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { PageShell } from "@/components/PageShell";
 import { CompareTool } from "@/components/CompareTool";
 import { JsonLd } from "@/components/JsonLd";
@@ -27,6 +28,24 @@ export default function ComparePage() {
     >
       <JsonLd data={calculatorLd({ name: "Platform fee comparison", description: "Compare what you keep from the same sale on every major selling and payment platform.", path: "/compare", dateModified: CONTENT_UPDATED })} />
       <CompareTool initial={initial} initialRows={rows} />
+      <div className="mt-10 grid gap-3 md:grid-cols-2">
+        <div className="float px-5 py-4 text-[0.92rem] leading-relaxed text-ink-2">
+          <span className="font-[640] text-ink">Selling locally?</span> OfferUp and Facebook Marketplace charge no fee for local pickup paid in person, so a local sale keeps the whole price.{" "}
+          <Link href="/offerup-fee-calculator" className="link">
+            OfferUp
+          </Link>{" "}
+          ·{" "}
+          <Link href="/facebook-marketplace-fee-calculator" className="link">
+            Facebook Marketplace
+          </Link>
+        </div>
+        <div className="float px-5 py-4 text-[0.92rem] leading-relaxed text-ink-2">
+          <span className="font-[640] text-ink">Your own store?</span> Shopify’s card fees are lower than marketplace fees, but you pay a monthly plan and bring every buyer yourself, so it isn’t ranked here.{" "}
+          <Link href="/shopify-fee-calculator" className="link">
+            Shopify fee calculator
+          </Link>
+        </div>
+      </div>
     </PageShell>
   );
 }

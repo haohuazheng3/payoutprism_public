@@ -31,8 +31,8 @@ export type FieldSection = "sale" | "shipping" | "costs" | "options";
 interface FieldBase {
   id: string;
   label: string;
-  /** One short sentence under the field, in plain language. */
-  help?: string;
+  /** One short sentence under the field, in plain language (may depend on the inputs and market). */
+  help?: string | ((inputs: Inputs, market: Market) => string);
   section: FieldSection;
   /** Hidden behind "More options" until opened (or until it holds a non-default value). */
   advanced?: boolean;
@@ -80,7 +80,7 @@ export interface SelectField extends FieldBase {
 
 export interface SegmentedField extends FieldBase {
   kind: "segmented";
-  options: SelectOption[];
+  options: SelectOption[] | ((inputs: Inputs, market: Market) => SelectOption[]);
 }
 
 export interface ToggleField extends FieldBase {
@@ -151,7 +151,7 @@ export interface Source {
 }
 
 export interface FeeChange {
-  /** ISO date the change took (or takes) effect. */
+  /** ISO date the change took (or takes) effect; "YYYY-MM" when the platform only gives the month. */
   date: string;
   /** What changed, with old → new values. */
   text: string;
@@ -182,6 +182,14 @@ export interface CalculatorDef {
   sellerNoun: string;
   /** One line for menus and cards: "6.5% transaction + 3% + $0.25 processing". */
   blurb: string;
+  /** What the main amount is, for result copy: "sale", "payment", "contract", "booking"… Defaults by category. */
+  saleNoun?: string;
+  /** Who pays the seller: "buyer", "payer", "client", "guest", "member", "donor"… Defaults by category. */
+  buyerNoun?: string;
+  /** Subtitle of the collapsed costs section, e.g. "Item cost, postage, packaging. Optional." */
+  costsHint?: string;
+  /** Reverse-mode result heading, e.g. "Set your goal to". Defaults to "Charge this <priceNoun>". */
+  reverseHead?: string;
   markets: Market[];
   defaultMarket: string;
   fields: FieldDef[];

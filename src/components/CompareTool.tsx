@@ -32,6 +32,9 @@ export function CompareTool({
   const [showCosts, setShowCosts] = useState(false);
   const engine = useRef<null | ((g: Group, c: CompareInputs) => CompareRow[])>(null);
   const touched = useRef(false);
+  const [ready, setReady] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- marks hydration for monitoring and tests
+  useEffect(() => setReady(true), []);
 
   // Restore ?price=&shipping=&cost=&label=&group= (links from calculator pages). The URL can only be
   // read after hydration, so this one effect sets state on purpose.
@@ -90,7 +93,7 @@ export function CompareTool({
   const sellLabel = group === "sell";
 
   return (
-    <div className={compact ? "" : "grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6"}>
+    <div className={compact ? "" : "grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6"} data-ready={ready ? "1" : undefined}>
       <div className={compact ? "min-w-0" : "float min-w-0 p-5 sm:p-7 lg:sticky lg:top-24 lg:col-span-4"}>
         {!compact && (
           <div className="segmented mb-6" role="tablist" aria-label="Compare">

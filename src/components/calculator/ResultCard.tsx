@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import type { CalculatorDef, Line, Market, Result } from "@/fees/types";
-import { formatMoney, formatPercentOf } from "@/fees/money";
-import { KIND_COLOR, KIND_LABEL } from "./util";
+import { formatMoney, formatPercentOf, moneyParts } from "@/fees/money";
+import { buyerNoun, cap, KIND_COLOR, KIND_LABEL } from "./util";
 
 export function BigMoney({ cents, market, className = "" }: { cents: number; market: Market; className?: string }) {
-  const parts = new Intl.NumberFormat(market.locale, { style: "currency", currency: market.currency }).formatToParts(Math.abs(cents) / 100);
+  const parts = moneyParts(cents, market.currency, market.locale);
   return (
-    <span className={`display tnum inline-flex items-baseline ${className}`} aria-label={formatMoney(cents, market.currency, market.locale)}>
+    <span className={`display tnum inline-flex items-baseline ${className}`} data-amount={formatMoney(cents, market.currency, market.locale)}>
+      <span className="sr-only">{formatMoney(cents, market.currency, market.locale)}</span>
       {cents < 0 && <span aria-hidden>−</span>}
       {parts.map((p, i) =>
         p.type === "currency" ? (
@@ -158,14 +159,14 @@ export function Breakdown({ def, result, market }: { def: CalculatorDef; result:
 
       {result.buyerFees.length > 0 && (
         <div className="mt-4">
-          <div className="eyebrow mb-1">Your buyer also pays</div>
+          <div className="eyebrow mb-1">Your {buyerNoun(def)} also pays</div>
           <ul className="divide-y divide-line">
             {result.buyerFees.map((l) => (
               <LineRow key={l.id} line={l} market={market} sign="+" sourceUrl={src(l.source)} />
             ))}
           </ul>
           <div className="mt-1 flex items-baseline justify-between border-t border-line pt-2.5 text-[0.9rem] text-ink-2">
-            <span>Buyer’s total</span>
+            <span>{cap(buyerNoun(def))}’s total</span>
             <span className="tnum font-[560] text-ink">{money(result.buyerPays)}</span>
           </div>
         </div>

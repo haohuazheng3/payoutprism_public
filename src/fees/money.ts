@@ -51,19 +51,48 @@ export function bool(inputs: Inputs, id: string): boolean {
 
 const formatters = new Map<string, Intl.NumberFormat>();
 
-export function formatMoney(cents: number, currency: CurrencyCode, locale = "en-US", opts: { sign?: boolean; whole?: boolean } = {}): string {
-  const key = `${locale}|${currency}|${opts.whole ? 0 : 2}`;
+/**
+ * The currency symbol to show. Canadian, Australian, New Zealand (…) dollars print as a bare "$"
+ * in their own locales, which reads as US dollars next to USD figures: use the unambiguous
+ * international form instead (CA$, A$, NZ$, MX$).
+ */
+const symbols = new Map<string, string>();
+
+export function currencySymbolFor(currency: CurrencyCode, locale: string): string {
+  const key = `${locale}|${currency}`;
+  const hit = symbols.get(key);
+  if (hit) return hit;
+  let sym = new Intl.NumberFormat(locale, { style: "currency", currency }).formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
+  if (sym === "$" && currency !== "USD") sym = new Intl.NumberFormat("en-US", { style: "currency", currency }).formatToParts(0).find((p) => p.type === "currency")?.value ?? currency;
+  symbols.set(key, sym);
+  return sym;
+}
+
+function formatter(currency: CurrencyCode, locale: string, whole: boolean): Intl.NumberFormat {
+  const key = `${locale}|${currency}|${whole ? 0 : "d"}`;
   let f = formatters.get(key);
   if (!f) {
-    f = new Intl.NumberFormat(locale, {
-      style: "currency",
-      currency,
-      minimumFractionDigits: opts.whole ? 0 : 2,
-      maximumFractionDigits: opts.whole ? 0 : 2,
-    });
+    // Default fraction digits come from the currency itself (2 for USD, 0 for JPY).
+    f = new Intl.NumberFormat(locale, { style: "currency", currency, ...(whole ? { minimumFractionDigits: 0, maximumFractionDigits: 0 } : {}) });
     formatters.set(key, f);
   }
-  const s = f.format(Math.abs(cents) / 100);
+  return f;
+}
+
+/** Formatted parts with the unambiguous symbol, for components that style each part. */
+export function moneyParts(cents: number, currency: CurrencyCode, locale = "en-US"): Intl.NumberFormatPart[] {
+  const sym = currencySymbolFor(currency, locale);
+  return formatter(currency, locale, false)
+    .formatToParts(Math.abs(cents) / 100)
+    .map((p) => (p.type === "currency" ? { ...p, value: sym } : p));
+}
+
+export function formatMoney(cents: number, currency: CurrencyCode, locale = "en-US", opts: { sign?: boolean; whole?: boolean } = {}): string {
+  const sym = currencySymbolFor(currency, locale);
+  const s = formatter(currency, locale, Boolean(opts.whole))
+    .formatToParts(Math.abs(cents) / 100)
+    .map((p) => (p.type === "currency" ? sym : p.value))
+    .join("");
   if (cents < 0) return `−${s}`;
   return opts.sign && cents > 0 ? `+${s}` : s;
 }

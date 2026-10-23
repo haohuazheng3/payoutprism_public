@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageShell } from "@/components/PageShell";
+import { formatChangeDate as formatDate } from "@/components/page/content-blocks";
 import { ALL } from "@/fees/all";
 import { pageMetadata } from "@/lib/seo";
 
@@ -10,14 +11,11 @@ export const metadata = pageMetadata({
   absoluteTitle: true,
 });
 
-function formatDate(iso: string) {
-  return new Date(`${iso}T12:00:00Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
 
 export default function FeeChanges() {
   const today = new Date().toISOString().slice(0, 10);
   const all = ALL.flatMap((d) =>
-    d.changes.map((c) => ({ ...c, def: d, src: c.source ? d.sources.find((s) => s.id === c.source) : undefined, upcoming: c.upcoming && c.date > today })),
+    d.changes.map((c) => ({ ...c, def: d, src: c.source ? d.sources.find((s) => s.id === c.source) : undefined, upcoming: c.date > today })),
   );
   const upcoming = all.filter((c) => c.upcoming).sort((a, b) => a.date.localeCompare(b.date));
   const past = all.filter((c) => !c.upcoming).sort((a, b) => b.date.localeCompare(a.date));

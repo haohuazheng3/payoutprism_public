@@ -1,5 +1,6 @@
 import type { CalculatorDef, FieldDef, Inputs, InputValue, LineKind, Market } from "@/fees/types";
 import { encodeStateQuery } from "@/fees/url";
+import { currencySymbolFor } from "@/fees/money";
 
 /** The spectrum: one color per kind of deduction, plus "you keep". */
 export const KIND_COLOR: Record<LineKind | "keep" | "profit", string> = {
@@ -55,9 +56,40 @@ export function tidyMoney(n: number): string {
 }
 
 export function currencySymbol(market: Market): string {
-  const parts = new Intl.NumberFormat(market.locale, { style: "currency", currency: market.currency }).formatToParts(0);
-  return parts.find((p) => p.type === "currency")?.value ?? market.currency;
+  return currencySymbolFor(market.currency, market.locale);
 }
+
+export function fieldHelp(f: FieldDef, inputs: Inputs, market: Market): string | undefined {
+  return typeof f.help === "function" ? f.help(inputs, market) : f.help;
+}
+
+const SALE_NOUN: Record<CalculatorDef["category"], string> = {
+  marketplaces: "sale",
+  payments: "payment",
+  freelance: "contract",
+  rentals: "booking",
+  creators: "sale",
+  fundraising: "campaign",
+};
+
+export function saleNoun(def: CalculatorDef): string {
+  return def.saleNoun ?? SALE_NOUN[def.category];
+}
+
+const BUYER_NOUN: Record<CalculatorDef["category"], string> = {
+  marketplaces: "buyer",
+  payments: "payer",
+  freelance: "client",
+  rentals: "guest",
+  creators: "buyer",
+  fundraising: "donor",
+};
+
+export function buyerNoun(def: CalculatorDef): string {
+  return def.buyerNoun ?? BUYER_NOUN[def.category];
+}
+
+export const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function fieldOptions(f: FieldDef, inputs: Inputs, market: Market) {
   if (f.kind !== "select" && f.kind !== "segmented") return [];
