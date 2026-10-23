@@ -1,0 +1,15 @@
+{
+  "name": "site-workers",
+  "private": true,
+  "type": "module",
+  "description": "Cloudflare Worker for the site: owner notifications (send_email binding) and a 30-minute health probe.",
+  "scripts": {
+    "deploy:mail": "wrangler deploy --config mail/wrangler.toml",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261003.1",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.147.0"
+  }
+}

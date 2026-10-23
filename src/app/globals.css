@@ -1,0 +1,649 @@
+@import "tailwindcss";
+
+/*
+ * Design language: "a clear ledger floating in open air".
+ * Everything you work with floats as a module: white, softly lifted, generously rounded.
+ * Everything else recedes into a quiet, nearly empty field so the modules carry the page.
+ * The only saturated colors are the spectrum that splits a sale into where the money goes.
+ * Light is the default; dark follows the system or the explicit [data-theme] choice.
+ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  color-scheme: light;
+  --void: #f2f3f0;
+  --void-2: #e9ebe6;
+  --void-glow: rgba(255, 255, 255, 0.92);
+  --card: #ffffff;
+  --card-2: #f6f7f4;
+  --card-3: #eef0ec;
+  --line: rgba(15, 20, 18, 0.07);
+  --line-2: rgba(15, 20, 18, 0.13);
+  --ink: #0f1412;
+  --ink-2: #3a423e;
+  --ink-3: #66706b;
+  --ink-4: #949c98;
+  --ink-inverse: #ffffff;
+  --focus: #0d8a5d;
+  --keep: #0d8a5d;
+  --keep-text: #0a7650;
+  --keep-soft: rgba(13, 138, 93, 0.1);
+  --platform: #ec5a3c;
+  --payment: #e8a13a;
+  --ads: #7a62ff;
+  --shipping: #2b98d6;
+  --subscription: #d9467a;
+  --payout: #b08d57;
+  --tax: #8a948f;
+  --cost: #4f5853;
+  --bad: #c2410c;
+  --bad-soft: rgba(194, 65, 12, 0.09);
+  --warn: #a16207;
+  --warn-soft: rgba(161, 98, 7, 0.1);
+  --shadow-float: 0 0 0 1px var(--line), 0 1px 2px rgba(15, 20, 18, 0.04), 0 12px 28px -14px rgba(15, 20, 18, 0.12),
+    0 40px 80px -40px rgba(15, 20, 18, 0.16);
+  --shadow-lift: 0 0 0 1px var(--line-2), 0 2px 4px rgba(15, 20, 18, 0.05), 0 18px 36px -16px rgba(15, 20, 18, 0.16),
+    0 56px 100px -44px rgba(15, 20, 18, 0.22);
+  --shadow-pill: 0 0 0 1px var(--line), 0 10px 30px -16px rgba(15, 20, 18, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --void: #0b0d0c;
+    --void-2: #101311;
+    --void-glow: rgba(120, 140, 130, 0.07);
+    --card: #151917;
+    --card-2: #1b201d;
+    --card-3: #222824;
+    --line: rgba(232, 240, 236, 0.08);
+    --line-2: rgba(232, 240, 236, 0.15);
+    --ink: #eef2f0;
+    --ink-2: #c4ccc8;
+    --ink-3: #94a09a;
+    --ink-4: #6c7772;
+    --ink-inverse: #0b0d0c;
+    --focus: #3ccf93;
+    --keep: #3ccf93;
+    --keep-text: #5edca7;
+    --keep-soft: rgba(60, 207, 147, 0.12);
+    --platform: #ff7a5c;
+    --payment: #f4b85a;
+    --ads: #9a87ff;
+    --shipping: #4fb5ee;
+    --subscription: #f06c9b;
+    --payout: #d4b07a;
+    --tax: #9aa6a0;
+    --cost: #b6c0bb;
+    --bad: #fb8a5c;
+    --bad-soft: rgba(251, 138, 92, 0.12);
+    --warn: #f2c14e;
+    --warn-soft: rgba(242, 193, 78, 0.12);
+    --shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 0 0 1px var(--line), 0 18px 50px -24px rgba(0, 0, 0, 0.85);
+    --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px var(--line-2), 0 28px 70px -28px rgba(0, 0, 0, 0.9);
+    --shadow-pill: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px var(--line), 0 14px 36px -18px rgba(0, 0, 0, 0.8);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --void: #0b0d0c;
+  --void-2: #101311;
+  --void-glow: rgba(120, 140, 130, 0.07);
+  --card: #151917;
+  --card-2: #1b201d;
+  --card-3: #222824;
+  --line: rgba(232, 240, 236, 0.08);
+  --line-2: rgba(232, 240, 236, 0.15);
+  --ink: #eef2f0;
+  --ink-2: #c4ccc8;
+  --ink-3: #94a09a;
+  --ink-4: #6c7772;
+  --ink-inverse: #0b0d0c;
+  --focus: #3ccf93;
+  --keep: #3ccf93;
+  --keep-text: #5edca7;
+  --keep-soft: rgba(60, 207, 147, 0.12);
+  --platform: #ff7a5c;
+  --payment: #f4b85a;
+  --ads: #9a87ff;
+  --shipping: #4fb5ee;
+  --subscription: #f06c9b;
+  --payout: #d4b07a;
+  --tax: #9aa6a0;
+  --cost: #b6c0bb;
+  --bad: #fb8a5c;
+  --bad-soft: rgba(251, 138, 92, 0.12);
+  --warn: #f2c14e;
+  --warn-soft: rgba(242, 193, 78, 0.12);
+  --shadow-float: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 0 0 1px var(--line), 0 18px 50px -24px rgba(0, 0, 0, 0.85);
+  --shadow-lift: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 0 0 1px var(--line-2), 0 28px 70px -28px rgba(0, 0, 0, 0.9);
+  --shadow-pill: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 0 0 1px var(--line), 0 14px 36px -18px rgba(0, 0, 0, 0.8);
+}
+
+@theme inline {
+  --color-void: var(--void);
+  --color-void-2: var(--void-2);
+  --color-card: var(--card);
+  --color-card-2: var(--card-2);
+  --color-card-3: var(--card-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-focus: var(--focus);
+  --color-keep: var(--keep);
+  --color-keep-text: var(--keep-text);
+  --color-keep-soft: var(--keep-soft);
+  --color-platform: var(--platform);
+  --color-payment: var(--payment);
+  --color-ads: var(--ads);
+  --color-shipping: var(--shipping);
+  --color-subscription: var(--subscription);
+  --color-payout: var(--payout);
+  --color-tax: var(--tax);
+  --color-cost: var(--cost);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-float: 28px;
+  --radius-inset: 20px;
+  --animate-rise: rise 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-fade: fade 0.3s ease both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -480px 0;
+  }
+  100% {
+    background-position: 480px 0;
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-padding-top: 96px;
+  }
+  body {
+    background-color: var(--void);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: var(--keep-soft);
+    color: var(--ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 3px;
+    border-radius: 12px;
+  }
+  button,
+  [role="button"],
+  summary {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+    color: inherit;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* The field everything floats in: one soft pool of light at the top, nothing else. */
+  .void-bg {
+    background:
+      radial-gradient(1100px 520px at 50% -140px, var(--void-glow), transparent 70%),
+      linear-gradient(180deg, var(--void) 0%, var(--void) 60%, var(--void-2) 100%);
+  }
+
+  .float {
+    background: var(--card);
+    border-radius: var(--radius-float);
+    box-shadow: var(--shadow-float);
+  }
+  .float-lift {
+    transition:
+      transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 0.25s ease;
+  }
+  @media (hover: hover) {
+    .float-lift:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-lift);
+    }
+  }
+  .float-lift:active {
+    transform: translateY(-1px) scale(0.995);
+  }
+  .inset {
+    background: var(--card-2);
+    border-radius: var(--radius-inset);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+  .pill {
+    border-radius: 999px;
+    background: var(--card);
+    box-shadow: var(--shadow-pill);
+  }
+
+  .display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.022em;
+    line-height: 1.04;
+    font-optical-sizing: auto;
+  }
+  .eyebrow {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+
+  /* Buttons: pill shaped, react on press (not on response). */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0 1.15rem;
+    border-radius: 999px;
+    font-weight: 560;
+    font-size: 0.95rem;
+    line-height: 1;
+    white-space: nowrap;
+    user-select: none;
+    transition:
+      transform 0.12s ease,
+      background-color 0.15s ease,
+      box-shadow 0.15s ease,
+      color 0.15s ease;
+  }
+  .btn:active {
+    transform: scale(0.97);
+  }
+  .btn[disabled] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .btn-ink {
+    background: var(--ink);
+    color: var(--ink-inverse);
+  }
+  @media (hover: hover) {
+    .btn-ink:hover {
+      background: color-mix(in oklab, var(--ink) 86%, var(--keep));
+    }
+  }
+  .btn-ghost {
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  @media (hover: hover) {
+    .btn-ghost:hover {
+      box-shadow: inset 0 0 0 1px var(--ink-4);
+    }
+  }
+  .btn-quiet {
+    background: transparent;
+    color: var(--ink-2);
+  }
+  @media (hover: hover) {
+    .btn-quiet:hover {
+      background: var(--card-3);
+      color: var(--ink);
+    }
+  }
+  .btn-sm {
+    min-height: 36px;
+    padding: 0 0.85rem;
+    font-size: 0.86rem;
+  }
+
+  /* Inputs: big, calm, 16px minimum so iOS never zooms. */
+  .field {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 52px;
+    padding: 0 1rem;
+    border-radius: 16px;
+    background: var(--card-2);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition:
+      box-shadow 0.15s ease,
+      background-color 0.15s ease;
+  }
+  .field:hover {
+    box-shadow: inset 0 0 0 1px var(--line-2);
+  }
+  .field:focus-within {
+    background: var(--card);
+    box-shadow:
+      inset 0 0 0 1.5px var(--focus),
+      0 0 0 4px var(--keep-soft);
+  }
+  .field input,
+  .field select {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font-size: 1.06rem;
+    font-weight: 520;
+    font-variant-numeric: tabular-nums;
+    height: 50px;
+  }
+  .field .affix {
+    color: var(--ink-3);
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 36px;
+    padding: 0 0.85rem;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    font-weight: 540;
+    color: var(--ink-2);
+    background: var(--card-2);
+    box-shadow: inset 0 0 0 1px var(--line);
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease,
+      box-shadow 0.12s ease,
+      transform 0.12s ease;
+  }
+  .chip:active {
+    transform: scale(0.97);
+  }
+  .chip[data-on="true"] {
+    background: var(--ink);
+    color: var(--ink-inverse);
+    box-shadow: none;
+  }
+
+  .segmented {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+    gap: 4px;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--card-3);
+  }
+  .segmented > button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 0.7rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border-radius: 999px;
+    font-size: 0.9rem;
+    font-weight: 560;
+    color: var(--ink-3);
+    transition:
+      background-color 0.12s ease,
+      color 0.12s ease,
+      box-shadow 0.12s ease;
+  }
+  .segmented > button[aria-pressed="true"],
+  .segmented > button[aria-selected="true"] {
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(15, 20, 18, 0.08), 0 0 0 1px var(--line);
+  }
+
+  .switch {
+    position: relative;
+    width: 46px;
+    height: 28px;
+    flex: none;
+    border-radius: 999px;
+    background: var(--card-3);
+    box-shadow: inset 0 0 0 1px var(--line-2);
+    transition: background-color 0.15s ease;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--card);
+    box-shadow: 0 1px 3px rgba(15, 20, 18, 0.25);
+    transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .switch[aria-checked="true"] {
+    background: var(--keep);
+    box-shadow: none;
+  }
+  .switch[aria-checked="true"]::after {
+    transform: translateX(18px);
+  }
+
+  /* Loading: modules shimmer in place of content, never a blank or a spinner. */
+  .skeleton {
+    border-radius: 12px;
+    background: linear-gradient(90deg, var(--card-3) 0%, var(--card-2) 40%, var(--card-3) 80%);
+    background-size: 960px 100%;
+    animation:
+      shimmer 1.4s linear infinite,
+      breathe 2.4s ease-in-out infinite;
+  }
+
+  .link {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 1px;
+    transition: text-decoration-color 0.15s ease;
+  }
+  .link:hover {
+    text-decoration-color: var(--ink);
+  }
+
+  /* Long-form copy outside the modules: quiet, readable, generous. */
+  .prose-quiet {
+    color: var(--ink-2);
+    font-size: 1.04rem;
+    line-height: 1.75;
+  }
+  .prose-quiet h2 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    letter-spacing: -0.018em;
+    color: var(--ink);
+    font-size: clamp(1.6rem, 1.2rem + 1.4vw, 2.1rem);
+    line-height: 1.15;
+    margin: 3.2rem 0 0.9rem;
+  }
+  .prose-quiet h3 {
+    color: var(--ink);
+    font-weight: 620;
+    font-size: 1.12rem;
+    margin: 2rem 0 0.5rem;
+  }
+  .prose-quiet p {
+    margin: 0.9rem 0;
+  }
+  .prose-quiet ul,
+  .prose-quiet ol {
+    margin: 0.9rem 0;
+    padding-left: 1.3rem;
+  }
+  .prose-quiet ul {
+    list-style: disc;
+  }
+  .prose-quiet ol {
+    list-style: decimal;
+  }
+  .prose-quiet li {
+    margin: 0.35rem 0;
+    padding-left: 0.2rem;
+  }
+  .prose-quiet li::marker {
+    color: var(--ink-4);
+  }
+  .prose-quiet strong {
+    color: var(--ink);
+    font-weight: 620;
+  }
+  .prose-quiet a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+  }
+  .prose-quiet a:hover {
+    text-decoration-color: var(--ink);
+  }
+  .prose-quiet code {
+    font-family: var(--font-mono);
+    font-size: 0.88em;
+    background: var(--card-3);
+    padding: 0.1em 0.35em;
+    border-radius: 6px;
+  }
+
+  /* Tables that live inside a floating module. */
+  .data-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.93rem;
+  }
+  .data-table th {
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+    color: var(--ink-2);
+  }
+  .data-table tr:last-child td {
+    border-bottom: 0;
+  }
+  .data-table td.num,
+  .data-table th.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .data-table td:first-child {
+    color: var(--ink);
+    font-weight: 540;
+  }
+
+  .scroll-x {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+}
