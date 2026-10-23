@@ -69,6 +69,23 @@ function jsonText(raw: string): string {
   return out.join("\n");
 }
 
+/**
+ * Some official pages are empty JavaScript shells to plain HTTP. Where the platform's own front end
+ * loads the content from a public endpoint, read that instead (no login, same text).
+ */
+async function fetchSource(url: string): Promise<Response> {
+  const amazon = /^https:\/\/sellercentral\.amazon\.com\/help\/hub\/reference\/external\/([A-Z0-9]+)/.exec(url);
+  if (amazon) {
+    return fetch("https://sellercentral.amazon.com/help/hub/mons-api/GetHelpTopic", {
+      method: "POST",
+      headers: { "User-Agent": UA, "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ guid: amazon[1] }),
+      signal: AbortSignal.timeout(25000),
+    });
+  }
+  return fetch(url, { headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" }, redirect: "follow", signal: AbortSignal.timeout(25000) });
+}
+
 interface Row {
   url: string;
   hash: string | null;
@@ -91,7 +108,7 @@ async function main() {
     let status = 0;
     let lines: string[] = [];
     try {
-      const res = await fetch(url, { headers: { "User-Agent": UA, Accept: "text/html,application/xhtml+xml", "Accept-Language": "en-US,en;q=0.9" }, redirect: "follow", signal: AbortSignal.timeout(25000) });
+      const res = await fetchSource(url);
       status = res.status;
       if (res.ok) {
         const raw = await res.text();
