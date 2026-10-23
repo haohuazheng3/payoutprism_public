@@ -54,7 +54,7 @@ export function ConsentManager() {
   }, []);
 
   useEffect(() => {
-    const open = () => setMode(window.__fwLoaded ? "notice" : "optin");
+    const open = () => setMode(window.__ppAnalytics ? "notice" : "optin");
     window.addEventListener(OPEN_EVENT, open);
     return () => window.removeEventListener(OPEN_EVENT, open);
   }, []);
