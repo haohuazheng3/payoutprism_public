@@ -414,3 +414,71 @@ describe("ebay: reverse mode", () => {
     expect(ebay.calculate({ ...inputs, price: (s.price! - 1) / 100 }, m).profit!).toBeLessThan(1000);
   });
 });
+
+describe("ebay: edges verified against the live pages (2026-10-23)", () => {
+  it("UK business: Home, Furniture & DIY pays a 10p per-order fee up to £10, other categories 30p; both £0.40 above", () => {
+    const home = { sellerUk: "business", category: "uk-home", shippingCharged: 0 };
+    expect(line(run(ebay, "uk", { ...home, price: 10 }), "perorder")).toBe(10);
+    expect(line(run(ebay, "uk", { ...home, price: 10.01 }), "perorder")).toBe(40);
+    expect(line(run(ebay, "uk", { ...home, category: "uk-furniture", price: 9.99 }), "perorder")).toBe(10);
+    expect(line(run(ebay, "uk", { sellerUk: "business", category: "uk-clothes", shippingCharged: 0, price: 10 }), "perorder")).toBe(30);
+    expect(line(run(ebay, "uk", { sellerUk: "business", category: "uk-clothes", shippingCharged: 0, price: 10.01 }), "perorder")).toBe(40);
+  });
+
+  it("UK business: watches 12.9% up to £750, 3% above; Mobile & Smart Phones 6.9% up to £1,000", () => {
+    const w = { sellerUk: "business", category: "uk-watches", shippingCharged: 0 };
+    expect(line(run(ebay, "uk", { ...w, price: 750 }), "fvf")).toBe(9675);
+    expect(line(run(ebay, "uk", { ...w, price: 850 }), "fvf")).toBe(9675 + 300);
+    expect(line(run(ebay, "uk", { sellerUk: "business", category: "uk-phones", shippingCharged: 0, price: 1000 }), "fvf")).toBe(6900);
+  });
+
+  it("US handbags: 15% of the whole sale up to $2,000.00, 9% of the whole sale from $2,000.01", () => {
+    const z = { category: "handbags", shippingCharged: 0, salesTax: 0 };
+    expect(line(run(ebay, "us", { ...z, price: 2000 }), "fvf")).toBe(30000);
+    expect(line(run(ebay, "us", { ...z, price: 2000.01 }), "fvf")).toBe(18000);
+  });
+
+  it("Canada and Germany per-order fee edges at 10.00", () => {
+    expect(line(run(ebay, "ca", { price: 10, shippingCharged: 0, salesTax: 0 }), "perorder")).toBe(30);
+    expect(line(run(ebay, "ca", { price: 10.01, shippingCharged: 0, salesTax: 0 }), "perorder")).toBe(40);
+    expect(line(run(ebay, "de", { sellerDe: "business", price: 10, shippingCharged: 0 }), "perorder")).toBe(35);
+    expect(line(run(ebay, "de", { sellerDe: "business", price: 10.01, shippingCharged: 0 }), "perorder")).toBe(45);
+  });
+
+  it("Germany business: clothing 12% up to €990, 3% above; coins 6.5%", () => {
+    const z = { sellerDe: "business", shippingCharged: 0 };
+    expect(line(run(ebay, "de", { ...z, price: 990 }), "fvf")).toBe(11880);
+    expect(line(run(ebay, "de", { ...z, price: 1090 }), "fvf")).toBe(11880 + 300);
+    expect(line(run(ebay, "de", { ...z, category: "de-coins", price: 100 }), "fvf")).toBe(650);
+  });
+
+  it("Buyer Protection band edges: UK £20 → £1.50 and £300 → £12.70; Australia $20 → $1.90 and $500 → $30.70", () => {
+    expect(bpf(run(ebay, "uk", { price: 300 }))).toBe(10 + 140 + 1120);
+    expect(bpf(run(ebay, "au", { price: 20 }))).toBe(30 + 160);
+    expect(bpf(run(ebay, "au", { price: 500 }))).toBe(30 + 160 + 2880);
+  });
+
+  it("every fee-table row has a unique name in every market (the page keys rows by name)", () => {
+    for (const m of ebay.markets) {
+      const names = ebay.schedule(m).map((r) => r.fee);
+      expect(new Set(names).size, m.id).toBe(names.length);
+    }
+  });
+
+  it("reverse mode jumps the jewelry cliff: $4,300 is first reachable just above $5,000", () => {
+    const m = M.us;
+    const inputs = { ...ebay.defaults(m), category: "jewelry", shippingCharged: 0, salesTax: 0 };
+    const s = solvePrice(ebay, inputs, m, "payout", 430000);
+    expect(s.price).toBe(500001);
+    expect(ebay.calculate({ ...inputs, price: 5000 }, m).payout).toBeLessThan(430000);
+  });
+
+  it("reverse mode in Australia on Pro Starter across the $4,000 band", () => {
+    const m = M.au;
+    const inputs = { ...ebay.defaults(m), planAu: "starter", shippingCharged: 0 };
+    const s = solvePrice(ebay, inputs, m, "payout", 400000);
+    expect(s.result!.payout).toBeGreaterThanOrEqual(400000);
+    expect(ebay.calculate({ ...inputs, price: (s.price! - 1) / 100 }, m).payout).toBeLessThan(400000);
+    expect(s.price!).toBeGreaterThan(400000);
+  });
+});

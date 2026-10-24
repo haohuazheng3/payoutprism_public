@@ -17,7 +17,9 @@
  *  - Afterpay/Clearpay: 6% + 30¢/30p of the order on every plan. Australia: excl. GST, so 10% GST
  *    is added on the fee.
  *  - Instant (and US same-day) transfers: 1.95% of the amount transferred, i.e. the balance from
- *    the payment after processing fees (sales tax included), as a separate "payout" line.
+ *    the payment after processing fees (sales tax included), as a separate "payout" line. Only up to
+ *    the daily limit in the UK (£3,500) and Australia (A$5,000); none on a US payment over $10,000
+ *    (it can't go out instantly) or on ACH money paid into Square Checking (no transfer needed).
  * Square doesn't publish a rounding rule; each line is rounded to the cent, half away from zero.
  * The official worked example ($100 in person, Canadian card → $2.75 + $1.50) has no rounding.
  */
@@ -63,12 +65,17 @@ export function bitcoinRate(at: number = Date.now()): number {
   return at >= Date.UTC(2027, 0, 1, 8, 0) ? 1 : 0;
 }
 
-/** Smallest / largest instant transfer, cents (US help 3807 + instant-transfers page, UK/CA/AU pricing pages). */
-const INSTANT_LIMITS: Record<string, { min: number; max: number; maxText: string }> = {
-  us: { min: 2500, max: 1_000_000, maxText: "$10,000 per transfer" },
-  uk: { min: 1500, max: 350_000, maxText: "£3,500 a day" },
-  ca: { min: 2500, max: 500_000, maxText: "C$5,000 per transfer" },
-  au: { min: 500, max: 500_000, maxText: "A$5,000 a day" },
+/**
+ * Smallest / largest instant transfer, cents (US help 3807 + instant-transfers page, UK/CA/AU pricing pages).
+ * `perDay`: the maximum is a daily limit (UK "maximum transfer limit is £3,500 per day", AU "Up to $5,000 AUD
+ * per day"), so only that much of one payment can go out instantly and the rest follows on the free schedule.
+ * Canada's C$5,000 and the US $10,000 are per transfer.
+ */
+const INSTANT_LIMITS: Record<string, { min: number; max: number; maxText: string; perDay: boolean }> = {
+  us: { min: 2500, max: 1_000_000, maxText: "$10,000 per transfer", perDay: false },
+  uk: { min: 1500, max: 350_000, maxText: "£3,500 a day", perDay: true },
+  ca: { min: 2500, max: 500_000, maxText: "C$5,000 per transfer", perDay: false },
+  au: { min: 500, max: 500_000, maxText: "A$5,000 a day", perDay: true },
 };
 
 const S = {
@@ -131,7 +138,7 @@ const changes: FeeChange[] = [
   { date: "2027-01-01", text: "US bitcoin payments go from 0% to 1% (Square: “0% processing fees until December 31, 2026, after which it will be 1%”).", source: S.help, upcoming: true },
   { date: "2026-10-15", text: "UK instant transfers rise from 1.5% to 1.95% of the balance transferred (fee schedule dated 15 October 2026).", source: S.ukFees },
   { date: "2026-10-01", text: "Australia: instant transfers rise from 1.5% to 1.95%, and Square sellers may no longer add a surcharge to card payments.", source: S.auTerms },
-  { date: "2026-03-03", text: "Canada: a 1.5% international transaction fee applies to cards issued outside Canada (not Interac or Afterpay).", source: S.caTerms },
+  { date: "2026-03-03", text: "Canada: a 1.5% international transaction fee starts for sellers who had a Square account on February 2, 2026, on cards issued outside Canada (not Interac or Afterpay).", source: S.caTerms },
   {
     date: "2026-02-19",
     text: "US: a 1.5% international card fee on top of every card rate is listed on Square’s US pricing page by this date (it wasn’t on February 2). Square published no start date.",
@@ -254,7 +261,7 @@ function methods(market: Market, plan: Plan, auLegacy: boolean, at: number = Dat
     },
     { id: "online", option: "Online store or payment link", group: "Online & invoices", line: "Card processing: online", rate: on, intl: "addon", shipping: true, byPlan: true, explain: "3.3% + 30¢ on Square Free, 2.9% + 30¢ on Plus and Premium, on everything the card is charged: items, shipping, tax and tip. Covers Square Online, payment links, subscriptions and eGift cards.", source: S.help },
     { id: "invoice_card", option: "Invoice paid by card", group: "Online & invoices", line: "Card processing: invoice", rate: on, intl: "addon", shipping: true, byPlan: true, explain: "Invoices paid by card cost the same as online payments: 3.3% + 30¢ on Square Free, 2.9% + 30¢ on Plus and Premium, on the full invoice total.", source: S.help },
-    { id: "ach", option: "Invoice paid by bank transfer (ACH)", group: "Online & invoices", line: "ACH bank transfer fee", rate: { pct: ACH_PCT, fixed: 0 }, intl: "none", ach: { cap: ACH_INVOICE_CAP[plan] }, shipping: true, byPlan: true, explain: "1% of the payment, at least $1. Square Plus and Premium cap it at $10; Square’s fee table lists no cap on Square Free. No fee when the money goes into Square Checking.", source: S.help },
+    { id: "ach", option: "Invoice paid by bank transfer (ACH)", group: "Online & invoices", line: "ACH bank transfer fee", rate: { pct: ACH_PCT, fixed: 0 }, intl: "none", ach: { cap: ACH_INVOICE_CAP[plan] }, shipping: true, byPlan: true, explain: "1% of the payment, at least $1. Square Plus, Square Premium and older (legacy) plans cap it at $10; Square’s fee table lists no cap on Square Free. No fee when the money goes into Square Checking.", source: S.help },
     { id: "api", option: "Your own website or app (Square API)", group: "Online & invoices", line: "Card processing: Online API", rate: US_API, intl: "addon", shipping: true, explain: "2.9% + 30¢ on every plan for cards taken inside your own website or app with Square’s payments APIs and SDKs.", source: S.ourFees },
     { id: "ach_api", option: "Bank transfer (ACH) on your own site (API)", group: "Online & invoices", line: "ACH bank transfer fee (API)", rate: { pct: ACH_PCT, fixed: 0 }, intl: "none", ach: { cap: ACH_API_CAP }, shipping: true, explain: "1% of the payment, at least $1 and at most $5, for bank payments taken with Square’s Web Payments SDK and Payments API. No fee into Square Checking.", source: S.dev },
     { id: "keyed", option: "Card typed in, or card on file", group: "Phone & saved cards", line: "Card processing: keyed in / card on file", rate: US_KEYED, intl: "addon", shipping: true, explain: "3.5% + 15¢ on every plan when a card number is typed in (Virtual Terminal, the app or an invoice) or a saved card on file is charged. It costs more because neither the card nor the cardholder is present.", source: S.help },
@@ -274,6 +281,19 @@ function methodFor(inputs: Inputs, market: Market, at?: number): Method {
 
 const INTL_TYPES = (m: Method, market: Market) => market.id !== "au" && m.intl !== "none";
 
+/** Smallest price in cents (up to $1,000,000) where `reached` holds, for a condition that stays true once met. */
+function firstPrice(reached: (cents: number) => boolean, ceiling = 100_000_000): number | null {
+  if (!reached(ceiling)) return null;
+  let lo = 0;
+  let hi = ceiling;
+  while (lo < hi) {
+    const mid = Math.floor((lo + hi) / 2);
+    if (reached(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+
 /* ---------------- the calculation ---------------- */
 
 function calculate(inputs: Inputs, market: Market) {
@@ -289,6 +309,7 @@ function calculate(inputs: Inputs, market: Market) {
   const total = price + shipping + tax + tip; // what the card (or bank account) is charged
   const taxTip = tax + tip;
   const intl = INTL_TYPES(method, market) && bool(inputs, "intlCard");
+  const intoChecking = market.id === "us" && Boolean(method.ach) && bool(inputs, "squareChecking");
 
   const fees: Line[] = [];
   const onTaxTip = (rate: number) => (taxTip ? pct(total, rate) - pct(total - taxTip, rate) : 0);
@@ -301,7 +322,6 @@ function calculate(inputs: Inputs, market: Market) {
 
   if (total > 0) {
     if (method.ach) {
-      const intoChecking = market.id === "us" && bool(inputs, "squareChecking");
       const raw = pct(total, ACH_PCT);
       const cap = method.ach.cap;
       let amount = Math.max(ACH_MIN, raw);
@@ -359,21 +379,41 @@ function calculate(inputs: Inputs, market: Market) {
   const instant = str(inputs, "payout", "standard") === "instant";
   if (instant && balance > 0) {
     const lim = INSTANT_LIMITS[market.id] ?? INSTANT_LIMITS.us;
-    const tooBig = market.id === "us" && total > lim.max;
-    const src = market.id === "uk" ? S.ukInstant : market.id === "ca" ? S.caHelp : market.id === "au" ? S.auTerms : S.transfers;
-    fees.push({
-      id: "instant",
-      label: market.id === "us" ? "Instant / same-day transfer fee" : "Instant transfer fee",
-      amount: tooBig ? 0 : pct(balance, INSTANT),
-      kind: "payout",
-      detail: tooBig ? "Payments over $10,000 go out next business day, free" : `${formatRate(INSTANT)} × ${money(balance)}`,
-      explain: tooBig
-        ? "Square doesn’t send single payments over $10,000 by instant or same-day transfer; they arrive in one to two business days at no charge."
-        : `1.95% of the amount transferred: what this payment leaves in your Square balance after processing fees${tax ? ", sales tax included" : ""}. Standard next-business-day transfers are free.`,
-      source: src,
-    });
-    if (!tooBig && balance < lim.min) notes.push(`Square only sends instant transfers of ${money(lim.min)} or more, so this payment would go out together with other sales.`);
-    if (!tooBig && balance > lim.max) notes.push(`Instant transfers are limited to ${lim.maxText}; Square sends the rest on the normal schedule.`);
+    const label = market.id === "us" ? "Instant / same-day transfer fee" : "Instant transfer fee";
+    if (intoChecking) {
+      // "Your money is instantly available in a free business checking account after every sale — no transfers needed."
+      fees.push({
+        id: "instant",
+        label,
+        amount: 0,
+        kind: "payout",
+        detail: "Paid into Square Checking: nothing to transfer",
+        explain: "Money paid into Square Checking is available there straight away, with no transfer needed, so no instant transfer fee applies.",
+        source: S.instant,
+      });
+    } else {
+      const tooBig = market.id === "us" && total > lim.max;
+      // UK and Australia: the limit is per day, so only that much of this payment goes out instantly.
+      const capped = !tooBig && lim.perDay && balance > lim.max;
+      const base = capped ? lim.max : balance;
+      const src = market.id === "uk" ? S.ukInstant : market.id === "ca" ? S.caHelp : market.id === "au" ? S.auTerms : S.transfers;
+      fees.push({
+        id: "instant",
+        label,
+        amount: tooBig ? 0 : pct(base, INSTANT),
+        kind: "payout",
+        detail: tooBig ? "Payments over $10,000 go out next business day, free" : `${formatRate(INSTANT)} × ${money(base)}${capped ? " (daily limit)" : ""}`,
+        explain: tooBig
+          ? "Square doesn’t send single payments over $10,000 by instant or same-day transfer; they arrive in one to two business days at no charge."
+          : capped
+            ? `1.95% of the amount transferred. Square sends at most ${lim.maxText} by instant transfer, so the rest of this payment goes out on the free standard schedule.`
+            : `1.95% of the amount transferred: what this payment leaves in your Square balance after processing fees${tax ? ", sales tax included" : ""}. Standard transfers are free.`,
+        source: src,
+      });
+      if (!tooBig && balance < lim.min) notes.push(`Square only sends instant transfers of ${money(lim.min)} or more, so this payment would go out together with other sales.`);
+      if (capped) notes.push(`Instant transfers are limited to ${lim.maxText}, so the rest of this payment follows on the free standard schedule.`);
+      if (!tooBig && !lim.perDay && balance > lim.max) notes.push(`Square caps each instant transfer at ${lim.maxText.replace(" per transfer", "")}, so moving this balance instantly takes more than one transfer.`);
+    }
   }
 
   const totalFees = fees.reduce((s, l) => s + l.amount, 0);
@@ -392,7 +432,7 @@ function calculate(inputs: Inputs, market: Market) {
       const be = Math.round((PLAN_MONTHLY.plus * 100) / (US_CARD_PRESENT.free.pct - US_CARD_PRESENT.plus.pct));
       notes.push(`Square Plus ($49 a month per location) lowers this to 2.5% + 15¢, which only covers its cost above about ${k(be)} a month of in-person card sales.`);
     } else if (plan === "free" && method.ach && !bool(inputs, "squareChecking") && pct(total, ACH_PCT) > (ACH_INVOICE_CAP.plus ?? 0)) {
-      notes.push(`On Square Plus or Premium this ACH fee would be capped at ${money(ACH_INVOICE_CAP.plus ?? 0)}.`);
+      notes.push(`On Square Plus, Square Premium or an older (legacy) Square plan this ACH fee would be capped at ${money(ACH_INVOICE_CAP.plus ?? 0)}.`);
     } else if (plan !== "free") {
       notes.push(`Square ${PLAN_NAME[plan]} also costs ${k(PLAN_MONTHLY[plan])} a month per location, which isn’t included in these per-payment fees.`);
     }
@@ -463,7 +503,7 @@ function schedule(market: Market): ScheduleRow[] {
     { fee: "ACH bank transfer (API)", amount: "1%, $1 min, $5 cap", appliesTo: "Payment amount", when: "Web Payments SDK + Payments API", source: S.ourFees },
     { fee: "Afterpay", amount: "6% + 30¢", appliesTo: "Whole order", when: "Every plan", source: S.ourFees },
     { fee: "EBT (SNAP)", amount: "1.8% + 5¢", appliesTo: "Payment amount", when: "In person, SNAP-eligible items", source: S.ourFees },
-    { fee: "Bitcoin payments", amount: `${formatRate(bitcoinRate())} (1% from Jan 1, 2027)`, appliesTo: "Payment amount", when: "Customer scans a QR code in person", source: S.help },
+    { fee: "Bitcoin payments", amount: bitcoinRate() ? "1%" : "0% (1% from Jan 1, 2027)", appliesTo: "Payment amount", when: "Customer scans a QR code in person", source: S.help },
     { fee: "International cards", amount: "+1.5%", appliesTo: "Payment total", when: "Card issued outside the US (not ACH, Afterpay, Cash App Pay, EBT, bitcoin)", source: S.help },
     { fee: "Instant or same-day transfer", amount: "1.95%", appliesTo: "Amount transferred", when: "Only if you choose it; next-business-day is free", source: S.transfers },
     { fee: "Gift card load", amount: "2.5% · Premium 0%", appliesTo: "Amount loaded", when: "Plus normal processing on the sale", source: S.help },
@@ -506,10 +546,10 @@ export const square: CalculatorDef = {
       section: "sale",
       options: [
         { value: "free", label: "Free" },
-        { value: "plus", label: "Plus · $49/mo" },
-        { value: "premium", label: "Premium · $149/mo" },
+        { value: "plus", label: "Plus" },
+        { value: "premium", label: "Premium" },
       ],
-      help: "Most sellers are on Free. Plus and Premium cost $49 or $149 a month per location and lower some rates.",
+      help: "Plus and Premium cost $49 and $149 a month per location and lower some rates. On an older Square plan, pick Free.",
       showIf: (i, m) => m.id === "us" && Boolean(methodFor(i, m).byPlan),
     },
     { id: "salesTax", kind: "percent", label: "Sales tax you add", section: "sale", advanced: true, max: 30, help: "Square takes its percentage of the tax too, because it’s part of what the card is charged.", showIf: (_i, m) => m.id === "us" || m.id === "ca" },
@@ -521,10 +561,10 @@ export const square: CalculatorDef = {
       label: "How do you get your money?",
       section: "options",
       options: [
-        { value: "standard", label: "Next business day · free" },
+        { value: "standard", label: "Standard · free" },
         { value: "instant", label: "Instant · 1.95%" },
       ],
-      help: "Instant transfers (and same-day transfers in the US) cost 1.95% of the amount sent.",
+      help: "Standard transfers are free. Instant transfers (and same-day transfers in the US) cost 1.95% of the amount sent.",
     },
     {
       id: "intlCard",
@@ -578,13 +618,33 @@ export const square: CalculatorDef = {
   }),
   calculate,
   breakpoints: (inputs, market) => {
-    // ACH: flat $1 below a $100 payment, 1% above, flat again at the cap. Convert the payment total back to the price field.
+    // Where the formula changes shape, as prices: the ACH $1 minimum and cap, the US instant transfer
+    // dropping away above a $10,000 payment, and the UK/AU daily instant limit. The payment total and the
+    // balance both rise with the price, so each edge is found exactly by bisection on the real calculation.
     const method = methodFor(inputs, market);
-    if (!method.ach) return [];
-    const taxRate = market.id === "us" || market.id === "ca" ? Math.max(0, num(inputs, "salesTax")) : 0;
-    const extra = toCents(num(inputs, "shippingCharged")) + toCents(num(inputs, "tip"));
-    const totals = [ACH_MIN * 100, ...(method.ach.cap !== undefined ? [method.ach.cap * 100] : [])];
-    return totals.map((t) => Math.ceil((t - extra) / (1 + taxRate / 100))).filter((p) => p > 0);
+    const at = (c: number) => calculate({ ...inputs, price: c / 100, payout: "standard" }, market);
+    const out: number[] = [];
+    const add = (p: number | null) => {
+      if (p !== null && p > 0) out.push(p);
+    };
+    const intoChecking = market.id === "us" && bool(inputs, "squareChecking");
+    if (method.ach && !intoChecking) {
+      add(firstPrice((c) => at(c).buyerPays >= ACH_MIN * 100)); // 1% of a $100 payment is the $1 minimum
+      const cap = method.ach.cap;
+      if (cap !== undefined) add(firstPrice((c) => at(c).buyerPays >= cap * 100));
+    }
+    if (str(inputs, "payout", "standard") === "instant" && !(method.ach && intoChecking)) {
+      const lim = INSTANT_LIMITS[market.id] ?? INSTANT_LIMITS.us;
+      if (market.id === "us") add(firstPrice((c) => at(c).buyerPays > lim.max));
+      else if (lim.perDay)
+        add(
+          firstPrice((c) => {
+            const r = at(c);
+            return r.buyerPays - r.totalFees >= lim.max;
+          }),
+        );
+    }
+    return out;
   },
   verifiedAt: "2026-10-23",
   sources,

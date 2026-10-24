@@ -85,12 +85,40 @@ describe("square", () => {
   });
 
   it("research D7: instant transfer is 1.95% of the amount transferred", () => {
-    // ACH into Square Checking has no processing fee, so the whole $1,000 is transferred.
-    const r = run(square, "us", { price: 1000, paymentType: "ach", squareChecking: true, payout: "instant" });
-    expect(line(r, "instant")).toBe(1950);
-    expect(r.payout).toBe(98050);
-    // On a card payment it applies to the balance after processing: 1.95% × 48.55
+    // ACH invoice of $1,010.10 on Free: 1% = $10.101 → $10.10, leaving exactly $1,000.00 to transfer.
+    const r = run(square, "us", { price: 1010.1, paymentType: "ach", payout: "instant" });
+    expect(line(r, "processing")).toBe(1010);
+    expect(line(r, "instant")).toBe(1950); // 1.95% × $1,000.00
+    expect(r.payout).toBe(101010 - 1010 - 1950);
+    // On a card payment it applies to the balance after processing: 1.95% × $48.55 = $0.9467
     expect(line(run(square, "us", { payout: "instant" }), "instant")).toBe(95);
+  });
+
+  it("no instant transfer fee on ACH money paid into Square Checking (no transfer needed)", () => {
+    const r = run(square, "us", { price: 1000, paymentType: "ach", squareChecking: true, payout: "instant" });
+    expect(line(r, "processing")).toBe(0);
+    expect(line(r, "instant")).toBe(0);
+    expect(r.payout).toBe(100000);
+  });
+
+  it("UK and Australia: instant fee only up to the daily limit; Canada's limit is per transfer", () => {
+    // UK £5,000 in person: 1.75% = £87.50, balance £4,912.50, only £3,500 can go instantly → 1.95% × 3,500 = £68.25
+    const uk = run(square, "uk", { price: 5000, payout: "instant" });
+    expect(line(uk, "processing")).toBe(8750);
+    expect(line(uk, "instant")).toBe(6825);
+    // AU A$6,000 in person: 1.6% = A$96, balance A$5,904, daily limit A$5,000 → A$97.50
+    const au = run(square, "au", { price: 6000, payout: "instant" });
+    expect(line(au, "processing")).toBe(9600);
+    expect(line(au, "instant")).toBe(9750);
+    // One cent under the limit is charged on the whole balance: A$5,081.29 → fee A$81.30, balance A$4,999.99 → 97.4998 → A$97.50
+    const auEdge = run(square, "au", { price: 5081.29, payout: "instant" });
+    expect(line(auEdge, "processing")).toBe(8130);
+    expect(line(auEdge, "instant")).toBe(9750);
+    expect(auEdge.fees.find((l) => l.id === "instant")!.detail).not.toContain("daily limit");
+    // CA C$8,000 credit in person: 2.5% = C$200, balance C$7,800 → 1.95% = C$152.10 (more than one transfer)
+    const ca = run(square, "ca", { price: 8000, payout: "instant" });
+    expect(line(ca, "instant")).toBe(15210);
+    expect(ca.notes.some((n) => n.includes("more than one transfer"))).toBe(true);
   });
 
   it("US: single payments over $10,000 can’t go out instantly, so no instant fee", () => {
@@ -171,5 +199,37 @@ describe("square", () => {
     }
     // Keep $98: the $1 minimum applies → charge $99.00
     expect(solvePrice(square, inputs, m, "payout", 9800).price).toBe(9900);
+  });
+
+  it("ACH breakpoints are exact with sales tax (first price whose total reaches $100 and $1,000)", () => {
+    const m = M.us;
+    const inputs = { ...square.defaults(m), paymentType: "ach", plan: "plus", salesTax: 7.25 };
+    // $93.24 + 7.25% tax ($6.7599 → $6.76) = $100.00; $932.40 + $67.60 = $1,000.00
+    expect(square.breakpoints!(inputs, m)).toEqual([9324, 93240]);
+  });
+
+  it("reverse mode across the US $10,000 instant-transfer edge", () => {
+    const m = M.us;
+    const inputs = { ...square.defaults(m), payout: "instant" };
+    expect(square.breakpoints!(inputs, m)).toEqual([1000001]);
+    // At $10,000.00: fee $260.15, balance $9,739.85, instant 1.95% = $189.93 → keep $9,549.92.
+    expect(square.calculate({ ...inputs, price: 10000 }, m).payout).toBe(954992);
+    // One cent more can't go out instantly, so no transfer fee: keep $9,739.86.
+    expect(solvePrice(square, inputs, m, "payout", 954993).price).toBe(1000001);
+    expect(solvePrice(square, inputs, m, "payout", 954992).price).toBe(1000000);
+  });
+
+  it("reverse mode across the UK daily instant limit", () => {
+    const m = M.uk;
+    const inputs = { ...square.defaults(m), payout: "instant" };
+    // Keep £3,500: p − 1.75% p − 1.95% × £3,500 ≥ £3,500 → p = £3,631.81 (fee £63.56, balance £3,568.25)
+    const s = solvePrice(square, inputs, m, "payout", 350000);
+    expect(s.price).toBe(363181);
+    expect(square.calculate({ ...inputs, price: 3631.8 }, m).payout).toBe(349999);
+  });
+
+  it("older (legacy) plan hint: Free ACH over $1,000 notes the $10 cap elsewhere", () => {
+    const r = run(square, "us", { price: 2500, paymentType: "ach", plan: "free" });
+    expect(r.notes.some((n) => n.includes("legacy") && n.includes("$10.00"))).toBe(true);
   });
 });

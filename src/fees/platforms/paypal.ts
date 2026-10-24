@@ -46,6 +46,7 @@ const S = {
   auPast: "pp-au-past",
   deBiz: "pp-de-merchant",
   deConsumer: "pp-de-consumer",
+  dePast: "pp-de-past",
 } as const;
 
 const sources: Source[] = [
@@ -79,6 +80,13 @@ const sources: Source[] = [
   { id: S.auPast, title: "Past Policy Updates", url: "https://www.paypal.com/au/legalhub/paypal/archive-policies-full", publisher: "PayPal Australia", checked: "2026-10-23" },
   { id: S.deBiz, title: "PayPal Händler- und Verkäufergebühren", url: "https://www.paypal.com/de/business/paypal-business-fees", publisher: "PayPal Deutschland", checked: "2026-10-23" },
   { id: S.deConsumer, title: "PayPal-Gebühren für Privatkunden", url: "https://www.paypal.com/de/digital-wallet/paypal-consumer-fees", publisher: "PayPal Deutschland", checked: "2026-10-23" },
+  {
+    id: S.dePast,
+    title: "Zurückliegende Aktualisierungen der Richtlinien",
+    url: "https://www.paypal.com/de/legalhub/paypal/archive-policies-full?locale.x=de_DE",
+    publisher: "PayPal Deutschland",
+    checked: "2026-10-23",
+  },
 ];
 
 /* ---------------------------------------------------------------------------------------------
@@ -183,7 +191,8 @@ const TYPES: Record<string, PayType[]> = {
       fixed: 49,
       intl: US_INTL,
       when: "The buyer chooses Pay in 4 or Pay Monthly",
-      explain: "Since January 13, 2025, Pay Later costs sellers 4.99% + $0.49 instead of the Checkout rate. You can turn Pay Later off in your account settings.",
+      explain:
+        "Since January 13, 2025, Pay Later costs sellers 4.99% + $0.49 instead of the Checkout rate. You can turn Pay Later off in your account settings. (Through a PayPal Point of Sale payment link it's charged at 3.49% + $0.49.)",
       source: S.usBiz,
     },
     {
@@ -196,6 +205,18 @@ const TYPES: Record<string, PayType[]> = {
       fixed: 49,
       when: "The buyer picks Venmo at PayPal checkout",
       explain: "Same rate as PayPal Checkout when the buyer pays with Venmo at your PayPal checkout or invoice.",
+      source: S.usBiz,
+    },
+    {
+      id: "crypto",
+      group: "Online sales",
+      label: "Crypto (Pay with Crypto)",
+      line: "Pay with Crypto fee",
+      official: "Pay With Crypto",
+      rate: 1.5,
+      fixed: 0,
+      when: "You let customers pay in cryptocurrency at checkout",
+      explain: "1.5% of the transaction amount since August 1, 2026 (it was 0.99%), with no fixed fee.",
       source: S.usBiz,
     },
     {
@@ -974,7 +995,8 @@ const TYPES: Record<string, PayType[]> = {
       fixed: 35,
       intl: DE_INTL_DONATION,
       when: "Money received as a donation",
-      explain: "Donations cost 2.49% + €0.35. From outside the EEA PayPal adds 2 percentage points (UK, US, Canada) up to 3.3 (rest of the world).",
+      explain:
+        "Donations cost 2.49% + €0.35. From outside the EEA PayPal adds 2 percentage points (UK, US, Canada) or 3.3 from the rest of the world (3 from non-EEA countries in “Europe II” such as Switzerland, which this calculator counts as elsewhere).",
       source: S.deBiz,
     },
     {
@@ -1026,6 +1048,8 @@ interface RegionChoice {
   label: string;
   /** For explanations: "outside the US", "in the EEA". */
   phrase: string;
+  /** For the field's help, before the surcharge: "Abroad", "EU/EEA", "elsewhere". */
+  short: string;
 }
 
 /** The "Is the payer outside your country?" field for each market (each has its own options). */
@@ -1035,8 +1059,8 @@ const PAYER_FIELD: Record<string, { id: string; label: string; help: string; opt
     label: "Is the payer outside the US?",
     help: "Payments from PayPal accounts registered in another country cost 1.5% more.",
     options: [
-      { value: "domestic", label: "No", phrase: "in the US" },
-      { value: "intl", label: "Yes", phrase: "outside the US" },
+      { value: "domestic", label: "No", phrase: "in the US", short: "" },
+      { value: "intl", label: "Yes", phrase: "outside the US", short: "Abroad" },
     ],
   },
   uk: {
@@ -1044,9 +1068,9 @@ const PAYER_FIELD: Record<string, { id: string; label: string; help: string; opt
     label: "Is the payer outside the UK?",
     help: "+1.29% from the EU/EEA, +1.99% from anywhere else. What counts is where their PayPal account is registered.",
     options: [
-      { value: "domestic", label: "No", phrase: "in the UK" },
-      { value: "eea", label: "Yes · EU/EEA", phrase: "in the EEA" },
-      { value: "other", label: "Yes · elsewhere", phrase: "outside the UK and EEA" },
+      { value: "domestic", label: "No", phrase: "in the UK", short: "" },
+      { value: "eea", label: "Yes · EU/EEA", phrase: "in the EEA", short: "EU/EEA" },
+      { value: "other", label: "Yes · elsewhere", phrase: "outside the UK and EEA", short: "elsewhere" },
     ],
   },
   ca: {
@@ -1054,9 +1078,9 @@ const PAYER_FIELD: Record<string, { id: string; label: string; help: string; opt
     label: "Is the payer outside Canada?",
     help: "+0.80% from the US, +1.00% from anywhere else. What counts is where their PayPal account is registered.",
     options: [
-      { value: "domestic", label: "No", phrase: "in Canada" },
-      { value: "us", label: "Yes · US", phrase: "in the US" },
-      { value: "other", label: "Yes · elsewhere", phrase: "outside Canada and the US" },
+      { value: "domestic", label: "No", phrase: "in Canada", short: "" },
+      { value: "us", label: "Yes · US", phrase: "in the US", short: "US" },
+      { value: "other", label: "Yes · elsewhere", phrase: "outside Canada and the US", short: "elsewhere" },
     ],
   },
   au: {
@@ -1064,8 +1088,8 @@ const PAYER_FIELD: Record<string, { id: string; label: string; help: string; opt
     label: "Is the payer outside Australia?",
     help: "Payments from PayPal accounts registered in another country cost 1% more.",
     options: [
-      { value: "domestic", label: "No", phrase: "in Australia" },
-      { value: "intl", label: "Yes", phrase: "outside Australia" },
+      { value: "domestic", label: "No", phrase: "in Australia", short: "" },
+      { value: "intl", label: "Yes", phrase: "outside Australia", short: "Abroad" },
     ],
   },
   de: {
@@ -1073,10 +1097,10 @@ const PAYER_FIELD: Record<string, { id: string; label: string; help: string; opt
     label: "Where is the payer's PayPal account?",
     help: "Payments from anywhere in the EU/EEA count as domestic. UK +1.29%; US/Canada and the rest of the world cost more.",
     options: [
-      { value: "domestic", label: "EU/EEA", phrase: "in the EEA" },
-      { value: "uk", label: "UK", phrase: "in the UK" },
-      { value: "usca", label: "US/Canada", phrase: "in the US or Canada" },
-      { value: "other", label: "Elsewhere", phrase: "outside the EEA, UK, US and Canada" },
+      { value: "domestic", label: "EU/EEA", phrase: "in the EEA", short: "EU/EEA" },
+      { value: "uk", label: "UK", phrase: "in the UK", short: "UK" },
+      { value: "usca", label: "US/Canada", phrase: "in the US or Canada", short: "US/Canada" },
+      { value: "other", label: "Elsewhere", phrase: "outside the EEA, UK, US and Canada", short: "elsewhere" },
     ],
   },
 };
@@ -1160,7 +1184,7 @@ const WITHDRAW: Record<string, { standard: string; options: Withdrawal[] }> = {
     ],
   },
   au: {
-    standard: "Not included",
+    standard: "Transfer to my Australian bank",
     options: [
       {
         id: "card",
@@ -1222,7 +1246,7 @@ const DISPUTES: Record<string, { dispute?: string; chargeback: string; when: str
   uk: { dispute: "£12 (£24 high volume)", chargeback: "£14", when: "Standard fee not charged on payments under £24, if you win, or if Seller Protection covers it" },
   ca: { dispute: "C$20 (C$40 high volume)", chargeback: "C$20", when: "Standard fee not charged on payments under C$40, if you win, or if Seller Protection covers it" },
   au: { chargeback: "A$15", when: "Not charged if the payment is eligible for Seller Protection" },
-  de: { dispute: "€14", chargeback: "€16", when: "Not charged on payments under €28, if you win, or if Seller Protection covers it" },
+  de: { dispute: "€14", chargeback: "€16", when: "Business accounts only; not charged on payments under €28, if you win, or if Seller Protection covers it" },
 };
 
 const TAX_MARKETS = new Set(["us", "ca"]);
@@ -1381,7 +1405,9 @@ function compute(inputs: Inputs, market: Market): Figures {
   if (t.personal) {
     notes.push("Friends and family is for personal payments only. PayPal's terms define it as money that isn't for goods or services, so use goods and services for a sale.");
     notes.push(`Sending to someone in another country costs the sender extra (from ${IN_TEXT[market.id]}: ${FF_INTL[market.id].text}). Receiving stays free unless PayPal converts the currency.`);
-  } else {
+  } else if (t.id !== "pos" && t.id !== "posKeyed") {
+    // The refund and surcharge rules on the fee pages cover commercial and invoicing payments;
+    // PayPal Point of Sale card payments run under their own terms, so no claim is made for them.
     if (market.id === "de") {
       if (fixedApplied) notes.push(`If you refund this payment, PayPal keeps the ${money(fixedApplied)} fixed part of the fee and returns the rest.`);
     } else if (txFee) {
@@ -1389,7 +1415,8 @@ function compute(inputs: Inputs, market: Market): Figures {
     }
     if (bool(inputs, "currencyConversion") && fixedApplied)
       notes.push(`PayPal charges the fixed fee in the currency you receive, so it can differ slightly from the ${money(fixedApplied)} used here (standard rate: ${FIXED_BY_CURRENCY[market.id]}).`);
-    else if (notes.length < 3) notes.push("You can't add a surcharge for paying with PayPal. To cover the fee, raise your price: “What to charge” finds the amount.");
+    else if (notes.length < 3 && t.group !== "Card processing")
+      notes.push("You can't add a surcharge for paying with PayPal. To cover the fee, raise your price: “What to charge” finds the amount.");
   }
 
   const result = assemble({
@@ -1494,6 +1521,7 @@ const changes: FeeChange[] = [
   },
   { date: "2026-08-01", text: "US: Pay with Crypto rose from 0.99% to 1.5% of the transaction amount.", source: S.usBiz },
   { date: "2025-10-09", text: "Canada: Pay Later (Pay in 4) launched for sellers at 4.90% + C$0.30, above the 2.90% standard rate. Sellers can turn it off.", source: S.caPast },
+  { date: "2025-07-17", text: "Germany: card-present payments with PayPal's card reader (then Zettle by PayPal) set to 1.39%; Payment Links launched at the standard transaction rates.", source: S.dePast },
   {
     date: "2025-05-27",
     text: "Australia: the standard rate rose from 2.6% to 2.9% + A$0.30 (international from 3.6% to 3.9%); cards on your own site fell from 1.75% to 1.50%.",
@@ -1504,6 +1532,7 @@ const changes: FeeChange[] = [
     text: "US: Pay Later moved from the 3.49% Checkout rate to 4.99% + $0.49; Advanced Credit and Debit Card Payments went from 2.59% + $0.49 to 2.89% + $0.29; Virtual Terminal from 3.09% + $0.49 to 3.39% + $0.29.",
     source: S.usPast,
   },
+  { date: "2025-01-09", text: "Germany: instant withdrawals to a bank account in the EEA (SEPA Instant) became free.", source: S.dePast },
   { date: "2023-10-23", text: "US: QR code payments changed from 1.90% + $0.10 (2.40% + $0.05 up to $10) to a single 2.29% + $0.09.", source: S.usPast },
 ];
 
@@ -1514,12 +1543,32 @@ function typeOptions(market: Market): SelectOption[] {
   return typesFor(market).map((t) => ({ value: t.id, label: t.label, hint: rateLabel(t, money), group: t.group }));
 }
 
+/**
+ * The payer field's help, from the selected payment type's own surcharges (they differ by type:
+ * Australian card processing adds 2.10%, Canadian charity payments from the US add nothing,
+ * German donations use PayPal's region groups). Falls back to the market's general sentence.
+ */
+function payerHelp(i: Inputs, m: Market): string {
+  const f = PAYER_FIELD[m.id] ?? PAYER_FIELD.us;
+  const t = typeOf(i, m);
+  if (!intlApplies(t)) return f.help;
+  const parts = f.options
+    .filter((o) => o.value !== "domestic" || m.id === "de")
+    .map((o) => {
+      const total = t.intlTotal?.[o.value];
+      const add = o.value === "domestic" ? 0 : total !== undefined ? total - t.rate : t.intl?.[o.value] ?? 0;
+      return `${o.short} +${formatRate(Math.max(0, add))}`;
+    });
+  const text = parts.join(", ");
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)} on top of the rate, by the payer's country as PayPal records it (not the shipping address).`;
+}
+
 const payerFields = Object.entries(PAYER_FIELD).map(([marketId, f]) => ({
   id: f.id,
   kind: "segmented" as const,
   label: f.label,
   section: "sale" as const,
-  help: f.help,
+  help: payerHelp,
   options: f.options.map((o) => ({ value: o.value, label: o.label })),
   showIf: (i: Inputs, m: Market) => m.id === marketId && intlApplies(typeOf(i, m)),
 }));
@@ -1530,6 +1579,8 @@ export const paypal: CalculatorDef = {
   path: "/paypal-fee-calculator",
   category: "payments",
   priceNoun: "amount to charge",
+  /** The default heading would read "Charge this amount to charge". */
+  reverseHead: "Charge this amount",
   sellerNoun: "seller",
   blurb: "3.49% + $0.49 Checkout, 2.99% goods & services, +1.5% international (US)",
   markets: MARKETS,
@@ -1541,7 +1592,12 @@ export const paypal: CalculatorDef = {
       kind: "money",
       label: "Amount you charge",
       section: "sale",
-      help: "The item or service price, or your invoice total. Shipping and tax the payer adds on top go below.",
+      help: (i, m) =>
+        typeOf(i, m).personal
+          ? "The amount your friend or family member sends you."
+          : TAX_MARKETS.has(m.id)
+            ? "The item or service price, or your invoice total. Shipping and sales tax the payer adds on top go below."
+            : `The item or service price including any ${m.id === "au" ? "GST" : "VAT"}, or your invoice total. Shipping goes below.`,
     },
     {
       id: "payType",
@@ -1592,7 +1648,12 @@ export const paypal: CalculatorDef = {
           ...wd.options.map((w) => ({ value: w.id, label: w.label, hint: `${formatRate(w.rate)}, min ${money(w.min)}${w.max !== undefined ? `, max ${money(w.max)}` : ""}` })),
         ];
       },
-      help: "Instant transfers and card withdrawals cost a percentage of what you move.",
+      help: (_i, m) =>
+        m.id === "au"
+          ? "Withdrawing to a card costs 1% (A$0.25 to A$10). PayPal's Australian fee pages list no fee for an Australian bank account."
+          : m.id === "de"
+            ? "Withdrawing to a card costs 1% (€0.25 to €10). Bank transfers, including instant ones, are free."
+            : "Instant transfers cost a percentage of what you move. Standard transfers to your bank are free.",
       showIf: (_i, m) => (WITHDRAW[m.id]?.options.length ?? 0) > 0,
     },
     {
@@ -1602,8 +1663,8 @@ export const paypal: CalculatorDef = {
       section: "options",
       advanced: true,
       options: [
-        { value: "standard", label: "Not enrolled, or under £4,000 last month (2.9%)" },
-        { value: "2.4", label: "£4,000.01 to £8,000 last month (2.4%)" },
+        { value: "standard", label: "Not enrolled, or up to £4,000 last month (2.9%)" },
+        { value: "2.4", label: "Over £4,000 up to £8,000 last month (2.4%)" },
         { value: "2.1", label: "Over £8,000 last month (2.1%)" },
       ],
       help: "Only if PayPal has confirmed your enrolment (you have to ask). Your rate depends on last month's eligible sales.",

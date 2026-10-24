@@ -145,6 +145,52 @@ describe("amazon-fba", () => {
     expect(sizeTier([60, 30, 30], 160).tier).toBe("xl-150-plus");
   });
 
+  it("Extra-Large 150+ lb is set by the greater of unit and dimensional weight, but billed on unit weight", () => {
+    // Boxed sofa 80 × 38 × 30 in, 90 lb: dimensional weight 91,200 / 139 = 656.1 lb → 150+ lb tier,
+    // fee from the 90 lb unit weight: $194.95 (non-peak, over $50), no Overmax (that is for XL up to 150 lb).
+    const sofa = sizeTier([80, 38, 30], 90);
+    expect(sofa.tier).toBe("xl-150-plus");
+    expect(sofa.shippingWeight).toBe(90);
+    expect(sofa.overmax).toBe(false);
+    expect(weightBand(sofa, "nonApparel")).toBe("151 lb or less");
+    expect(fee([80, 38, 30], 90, "nonApparel", "nonpeak", 400)).toBe(19495);
+    // 160 lb unit weight: $194.95 + $0.19 × 9 lb above 151 lb = $196.66.
+    expect(fee([60, 30, 30], 160, "nonApparel", "nonpeak", 400)).toBe(19666);
+    // Dimensional weight exactly 150 lb (50 × 30 × 13.9 = 20,850 in³) stays in 70+ to 150 lb:
+    // $51.32 + $0.75 × (150 − 71) = $110.57. A hair more crosses into 150+.
+    expect(sizeTier([50, 30, 13.9], 100).tier).toBe("xl-70-150");
+    expect(fee([50, 30, 13.9], 100, "nonApparel", "nonpeak", 400)).toBe(11057);
+    expect(sizeTier([50, 30, 13.91], 100).tier).toBe("xl-150-plus");
+  });
+
+  it("hand-computed cases: price bands, Bulky packaging, Overmax, apparel SIPP, storage surcharge, hazmat", () => {
+    // 12 × 9 × 2 in, 0.8 lb: dimensional weight 216 / 139 = 1.55 lb → large standard 1.5+ to 1.75 lb.
+    const box = { length: 12, width: 9, height: 2, weight: 0.8, season: "nonpeak", storageMonths: 0 };
+    expect(line(run(fba, "us", { ...box, price: 9.99 }), "fulfillment")).toBe(475);
+    expect(line(run(fba, "us", { ...box, price: 50 }), "fulfillment")).toBe(557);
+    expect(line(run(fba, "us", { ...box, price: 50.01 }), "fulfillment")).toBe(583);
+    expect(line(run(fba, "us", { ...box, price: 50 }), "fuel")).toBe(19); // 3.5% × $5.57 = $0.19495
+    // Small Bulky 20 × 15 × 10 in, 25 lb (dim 21.58 lb): $7.55 + $0.38 × 24 = $16.67; packaging (20–25 lb dim) $2.92; fuel $0.58.
+    const bulky = run(fba, "us", { length: 20, width: 15, height: 10, weight: 25, price: 60, season: "nonpeak", storageMonths: 0 });
+    expect([line(bulky, "fulfillment"), line(bulky, "packaging"), line(bulky, "fuel")]).toEqual([1667, 292, 58]);
+    // 97 × 4 × 4 in, 20 lb: Extra-Large 0–50 lb, $26.33 + $0.38 × 19 = $33.55, plus the $17 Overmax fee.
+    const pole = run(fba, "us", { length: 97, width: 4, height: 4, weight: 20, price: 80, season: "nonpeak", storageMonths: 0 });
+    expect([line(pole, "fulfillment"), line(pole, "overmax")]).toEqual([3355, 1700]);
+    // Apparel, 1 oz small standard, $9, peak: $2.85; SIPP −$0.06; fuel 3.5% × $2.79 = $0.09765 → $0.10.
+    const tee = run(fba, "us", { category: "clothing", length: 8, width: 6, height: 0.5, weight: 1 / 16, price: 9, season: "peak", sipp: true, storageMonths: 0 });
+    expect([line(tee, "fulfillment"), line(tee, "sipp"), line(tee, "fuel")]).toEqual([285, -6, 10]);
+    // 18 × 14 × 8 in = 1.1667 cu ft: 2 months × $0.78 = $1.82; utilization 22–28 weeks: 1 month × $0.44 = $0.51.
+    const stored = run(fba, "us", { length: 18, width: 14, height: 8, weight: 10, price: 40, storageMonths: 2, storageSeason: "offpeak", utilization: "22-28", season: "nonpeak" });
+    expect([line(stored, "storage"), line(stored, "utilization")]).toEqual([182, 51]);
+    // Hazmat 12 × 8 × 4 in, 2 lb: dim 2.76 lb → 2.75+ to 3 lb, dangerous-goods peak $10–$50 = $7.94.
+    expect(line(run(fba, "us", { length: 12, width: 8, height: 4, weight: 2, price: 20, season: "peak", dangerousGoods: true, storageMonths: 0 }), "fulfillment")).toBe(794);
+  });
+
+  it("bracket note speaks of gift wrap, not shipping, on FBA orders", () => {
+    const r = run(fba, "us", { category: "clothing", price: 17, giftWrap: 2, season: "nonpeak" });
+    expect(r.notes.some((n) => n.includes("including gift wrap") && !n.includes("shipping and gift wrap"))).toBe(true);
+  });
+
   it("weight steps: large standard 3+ lb per 4 oz (apparel per half-lb), bulky per lb", () => {
     const at = (lb: number, t: FeeType = "nonApparel") => fee([12, 10, 6], lb, t, "nonpeak", 20); // dim weight 5.18 lb
     const small = (lb: number, t: FeeType = "nonApparel") => fee([12, 10, 3], lb, t, "nonpeak", 20); // dim weight 2.59 lb
@@ -197,11 +243,29 @@ describe("amazon-fba", () => {
     expect(storageSeason(Date.UTC(2027, 0, 1))).toBe("offpeak");
   });
 
+  it("keeps to three notes and mentions the refund administration fee", () => {
+    const r = run(fba, "us", { season: "nonpeak", price: 10.5 });
+    expect(r.notes.length).toBeLessThanOrEqual(3);
+    expect(r.notes.some((n) => n.includes("$0.32 refund administration fee"))).toBe(true); // 20% × 15% × $10.50 = $0.315
+    expect(r.notes.some((n) => n.includes("$9.99"))).toBe(true); // Low-Price FBA cliff note
+  });
+
   it("UK-established sellers pay 2% on the referral and fulfillment fees", () => {
     const r = run(fba, "us", { establishment: "uk", season: "peak" });
     expect(line(r, "dsf")).toBe(Math.ceil(0.02 * 300) + Math.ceil(0.02 * 374)); // 6 + 8
     const it = run(fba, "us", { establishment: "it-es", season: "peak" });
     expect(line(it, "dsf")).toBe(9); // 3% × $3.00 only, not the FBA fee
+  });
+
+  it("reverse mode across the $50.01 price band: true minimum for a profit target", () => {
+    const m = M.us;
+    const inputs = { ...fba.defaults(m), season: "peak", storageSeason: "peak", itemCost: 5 };
+    expect(fba.breakpoints!(inputs, m)).toEqual([1000, 5001]);
+    // At $46.28: referral $6.94, fulfillment $3.74, fuel $0.13, storage $0.07, plan $0.40 → payout $35.00, profit $30.00.
+    const s = solvePrice(fba, inputs, m, "profit", 3000);
+    expect(s.price).toBe(4628);
+    expect(s.result!.profit).toBe(3000);
+    expect(fba.calculate({ ...inputs, price: 46.27 }, m).profit).toBeLessThan(3000);
   });
 
   it("reverse mode finds the true lowest price across the $10 Low-Price FBA edge", () => {

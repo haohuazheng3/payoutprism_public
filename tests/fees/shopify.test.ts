@@ -143,11 +143,71 @@ describe("shopify", () => {
   });
 
   it("Shopify Tax cap: $0.99 per order, one cent below and at the edge", () => {
-    const at = (price: number) => line(run(shopify, "us", { ...one, price, shippingCharged: 0, shopifyTax: true }), "shopifytax");
-    expect(at(284.28)).toBe(99); // 0.35% × 284.28 = 0.99498
-    expect(at(284.29)).toBe(99); // 0.995 → 1.00, capped
-    expect(at(1000)).toBe(99);
+    const at = (price: number) => run(shopify, "us", { ...one, price, shippingCharged: 0, shopifyTax: true }).fees.find((l) => l.id === "shopifytax")!;
+    // 0.35% × 284.28 = 0.99498 → $0.99 uncapped; 0.35% × 284.29 = 0.995015 → $1.00, so the cap applies from here.
+    expect(at(284.28).amount).toBe(99);
+    expect(at(284.28).detail).not.toContain("capped");
+    expect(at(284.29).amount).toBe(99);
+    expect(at(284.29).detail).toContain("capped");
+    expect(at(1000).amount).toBe(99);
+    // Plus: 0.25% reaches $0.995 at $398.00 (0.995 → $1.00).
+    const plus = (price: number) => run(shopify, "us", { ...one, plan: "plus", price, shippingCharged: 0, shopifyTax: true }).fees.find((l) => l.id === "shopifytax")!;
+    expect(plus(397.99).detail).not.toContain("capped"); // 0.994975 → $0.99
+    expect(plus(398).detail).toContain("capped");
+    // UK/CA rate is 0.25% (Plus 0.15%), cap 0.99 in local currency: £100 → £0.25.
+    expect(line(run(shopify, "uk", { ...one, price: 100, shippingCharged: 0, shopifyTax: true }), "shopifytax")).toBe(25);
+    expect(line(run(shopify, "ca", { ...one, plan: "plus", price: 100, shippingCharged: 0, shopifyTax: true }), "shopifytax")).toBe(15);
     expect(run(shopify, "au", { shopifyTax: true }).fees.some((l) => l.id === "shopifytax")).toBe(false);
+  });
+
+  // ---- Hand-computed cases (worked out from the official rates, not from the module) ----
+
+  it("Canada Grow, American Express, C$120 + C$10 shipping + 13% HST", () => {
+    // gross = 130 + 16.90 = 146.90; 3.4% × 146.90 = 4.9946 → 4.99 + 0.30 = 5.29; plan C$132 ÷ 100 = 1.32
+    const r = run(shopify, "ca", { plan: "grow", card: "premium", price: 120, shippingCharged: 10, salesTax: 13 });
+    expect(r.buyerPays).toBe(14690);
+    expect(line(r, "processing")).toBe(529);
+    expect(line(r, "plan")).toBe(132);
+    expect(r.totalFees).toBe(661);
+    expect(r.payout).toBe(13000 - 661);
+  });
+
+  it("UK Advanced, foreign card paying in its own currency, £80", () => {
+    // 2.5% × 80 + 0.25 = 2.25; conversion 2% × 80 = 1.60; plan £344 ÷ 100 = 3.44
+    const r = run(shopify, "uk", { plan: "advanced", card: "international", price: 80, shippingCharged: 0, currencyConversion: true });
+    expect(line(r, "processing")).toBe(225);
+    expect(line(r, "fx")).toBe(160);
+    expect(line(r, "plan")).toBe(344);
+    expect(r.payout).toBe(8000 - 729);
+  });
+
+  it("Australia Plus 3-year term, in person, A$200 (October 2026 rates)", () => {
+    // 1.45% × 200 = 2.90, no fixed fee; GST 10% × 2.90 = 0.29; plan A$3,700 ÷ 100 = 37.00
+    const r = run(shopify, "au", { plan: "plus", channel: "inperson", price: 200, shippingCharged: 0 });
+    expect(line(r, "processing")).toBe(290);
+    expect(line(r, "gst")).toBe(29);
+    expect(line(r, "plan")).toBe(3700);
+    expect(r.totalFees).toBe(4019);
+    // AmEx on Basic, A$99.99: 2.9% × 99.99 = 2.89971 → 2.90 + 0.30 = 3.20; GST 0.32
+    const amex = run(shopify, "au", { ...one, card: "premium", price: 99.99, shippingCharged: 0 });
+    expect(line(amex, "processing")).toBe(320);
+    expect(line(amex, "gst")).toBe(32);
+  });
+
+  it("US Plus with another provider and $30 of store credit on a $100 order", () => {
+    // store credit: 0.2% × 30 = 0.06; the $70 on the card: 0.2% × 70 = 0.14 to Shopify, 2.9% × 70 + 0.30 = 2.33 to the provider
+    const r = run(shopify, "us", { plan: "plus", provider: "other", price: 100, shippingCharged: 0, giftCard: 30 });
+    expect(line(r, "giftcard")).toBe(6);
+    expect(line(r, "transaction")).toBe(14);
+    expect(line(r, "provider")).toBe(233);
+    expect(line(r, "plan")).toBe(2300); // $2,300 3-year term ÷ 100
+  });
+
+  it("US Grow billed yearly on the default order: 2.7% × 55 = 1.485 rounds to 1.49", () => {
+    const r = run(shopify, "us", { plan: "grow", billing: "yearly" });
+    expect(line(r, "processing")).toBe(179);
+    expect(line(r, "plan")).toBe(79);
+    expect(line(run(shopify, "us", { ...one, plan: "plus", channel: "manual" }), "processing")).toBe(197); // 3.4% × 55 = 1.87 + 0.10
   });
 
   it("warns below Shopify Payments' minimum charge (one cent below and at the edge)", () => {
@@ -171,6 +231,30 @@ describe("shopify", () => {
     expect(s.price).not.toBeNull();
     expect(s.result!.payout).toBeGreaterThanOrEqual(5000);
     expect(shopify.calculate({ ...inputs, price: (s.price! - 1) / 100 }, m).payout).toBeLessThan(5000);
+  });
+
+  it("breakpoints: first price charged to a card, and the Shopify Tax cap", () => {
+    const m = M.us;
+    const d = shopify.defaults(m);
+    expect(shopify.breakpoints!(d, m)).toEqual([]); // $5 shipping: a card is charged from $0.00
+    expect(shopify.breakpoints!({ ...d, shippingCharged: 0 }, m)).toEqual([1]);
+    expect(shopify.breakpoints!({ ...d, shopifyTax: true }, m)).toEqual([27929]); // $279.29 + $5 = $284.29
+    expect(shopify.breakpoints!({ ...d, shippingCharged: 0, shopifyTax: true, plan: "plus" }, m)).toEqual([1, 39800]);
+  });
+
+  it("reverse mode across the Shopify Tax cap", () => {
+    const m = M.us;
+    const inputs = { ...shopify.defaults(m), ...one, shippingCharged: 0, shopifyTax: true };
+    // p − (2.9% p + 0.30) − 0.99 = 300 → p = 310.29 (2.9% × 310.29 = 8.998 → 9.00)
+    const s = solvePrice(shopify, inputs, m, "payout", 30000);
+    expect(s.price).toBe(31029);
+    expect(s.result!.payout).toBe(30000);
+    expect(shopify.calculate({ ...inputs, price: 310.28 }, m).payout).toBe(29999);
+    // Below the cap, at $103.67: 2.9% = 3.00643 → 3.01, + 0.30, Shopify Tax 0.35% = 0.362845 → 0.36 → keeps 100.00;
+    // at $103.66: 3.00614 → 3.01 and 0.36281 → 0.36 → keeps 99.99.
+    const low = solvePrice(shopify, inputs, m, "payout", 10000);
+    expect(low.price).toBe(10367);
+    expect(shopify.calculate({ ...inputs, price: 103.66 }, m).payout).toBe(9999);
   });
 
   it("reverse mode across the gift-card breakpoint (the card fee starts once the order exceeds the gift card)", () => {

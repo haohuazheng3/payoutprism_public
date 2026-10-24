@@ -70,6 +70,19 @@ describe("paypal", () => {
     expect(line(run(paypal, "us", { payType: "donation" }), "transaction")).toBe(338);
     expect(line(run(paypal, "us", { payType: "charity" }), "transaction")).toBe(248);
     expect(line(run(paypal, "us", { payType: "posKeyed" }), "transaction")).toBe(358);
+    expect(line(run(paypal, "us", { payType: "crypto" }), "transaction")).toBe(150); // 1.5% since Aug 1, 2026, no fixed fee
+  });
+
+  it("US: in-person and crypto payments have no international question; online types do", () => {
+    const shown = (payType: string) => {
+      const f = paypal.fields.find((x) => x.id === "payerUs")!;
+      return f.showIf!({ ...paypal.defaults(M.us), payType }, M.us);
+    };
+    expect(shown("checkout")).toBe(true);
+    expect(shown("invoiceBank")).toBe(true);
+    expect(shown("pos")).toBe(false);
+    expect(shown("crypto")).toBe(false);
+    expect(shown("ff")).toBe(false);
   });
 
   it("US invoices: same rates as checkout, and Pay by Bank is 1% capped at $10.00 (edges)", () => {
@@ -197,9 +210,83 @@ describe("paypal", () => {
     expect(line(run(paypal, "de", { payType: "pos" }), "transaction")).toBe(139);
   });
 
+  it("Germany: UK donors (Europe I) add 2 points; card, eTerminal, micropayment and VT rates across markets", () => {
+    expect(line(run(paypal, "de", { payType: "donation", payerDe: "uk" }), "transaction")).toBe(484); // (2.49 + 2) + 0.35
+    expect(line(run(paypal, "de", { payType: "charity", payerDe: "usca" }), "transaction")).toBe(384); // (1.50 + 1.99) + 0.35
+    expect(line(run(paypal, "de", { payType: "vt" }), "transaction")).toBe(378); // eTerminal 3.39 + 0.39
+    expect(line(run(paypal, "de", { payType: "posKeyed" }), "transaction")).toBe(325); // 2.9 + 0.35
+    expect(line(run(paypal, "de", { payType: "micro", amount: 2 }), "transaction")).toBe(19); // 0.0998 + 0.09
+    expect(line(run(paypal, "uk", { payType: "vt" }), "transaction")).toBe(320); // 2.9% + £0.30 since Oct 1, 2026
+    expect(line(run(paypal, "uk", { payType: "micro", amount: 2, payerUk: "other" }), "transaction")).toBe(17); // 6% + £0.05
+    expect(line(run(paypal, "ca", { payType: "micro", amount: 2, payerCa: "us" }), "transaction")).toBe(15); // 5.0% + C$0.05
+    expect(line(run(paypal, "au", { payType: "vt", payerAu: "intl" }), "transaction")).toBe(490); // 4.60% + A$0.30 (CFSGPDS 17.4)
+  });
+
   it("Germany: refunds keep only the fixed part; other markets keep the whole fee", () => {
     expect(run(paypal, "de").notes.join(" ")).toContain("0,39");
     expect(run(paypal, "us").notes.join(" ")).toContain("$3.98");
+  });
+
+  /* ------------------------------------------------------------ edges, worked by hand */
+
+  it("edges one cent below and at each threshold, worked by hand", () => {
+    // UK QR: £9.99 → 2% = 0.1998 → 0.20 + 0.05
+    expect(line(run(paypal, "uk", { payType: "qr", amount: 9.99 }), "transaction")).toBe(25);
+    // UK QR £10.00 from the EEA: (2% + 1.29%) × 10 = 0.329 → 0.33 + 0.05
+    expect(line(run(paypal, "uk", { payType: "qr", amount: 10, payerUk: "eea" }), "transaction")).toBe(38);
+    // Canada QR from a US payer: C$10.00 → (2.40% + 0.80%) × 10 = 0.32 + 0.05; C$10.01 → (1.90% + 0.80%) × 10.01 = 0.27027 → 0.27 + 0.10
+    expect(line(run(paypal, "ca", { payType: "qr", amount: 10, payerCa: "us" }), "transaction")).toBe(37);
+    expect(line(run(paypal, "ca", { payType: "qr", amount: 10.01, payerCa: "us" }), "transaction")).toBe(37);
+    // US Pay by Bank: $999.50 → 9.995 → $10.00, the cap
+    expect(line(run(paypal, "us", { payType: "invoiceBank", amount: 999.5 }), "transaction")).toBe(1000);
+    // Australian card withdrawal (1%, A$0.25–A$10): A$24.99 → minimum; A$25.50 → 0.255 → 0.26; A$999.49 → 9.99; A$1,000 → 10.00
+    const auWd = (amount: number) => line(run(paypal, "au", { payType: "ff", amount, withdraw: "card" }), "withdrawal");
+    expect(auWd(24.99)).toBe(25);
+    expect(auWd(25.5)).toBe(26);
+    expect(auWd(999.49)).toBe(999);
+    expect(auWd(1000)).toBe(1000);
+    // On a A$100 sale the card withdrawal is 1% of the A$96.80 left: 0.968 → 0.97
+    expect(line(run(paypal, "au", { withdraw: "card" }), "withdrawal")).toBe(97);
+    // Germany: a donor anywhere in the EEA counts as domestic (2.49% + €0.35); elsewhere adds 3.3 points
+    expect(line(run(paypal, "de", { payType: "donation" }), "transaction")).toBe(284);
+    // UK Pay in 3 from outside the EEA, £50: (3.9% + 1.99%) × 50 = 2.945 → 2.95 + 0.30
+    expect(line(run(paypal, "uk", { payType: "paylater", amount: 50, payerUk: "other" }), "transaction")).toBe(325);
+    // US micropayments from abroad, $20: (4.99% + 1.5%) × 20 = 1.298 → 1.30 + 0.09 beats (3.49% + 1.5%) × 20 + 0.49 = 1.49
+    expect(line(run(paypal, "us", { payType: "micro", amount: 20, payerUs: "intl" }), "transaction")).toBe(139);
+    // US micropayments just past the crossover, $27: standard 0.9423 → 0.94 + 0.49 = 1.43 beats 1.3473 → 1.35 + 0.09
+    expect(line(run(paypal, "us", { payType: "micro", amount: 27 }), "transaction")).toBe(143);
+    // Canada with 13% HST: C$100 + C$10 shipping → C$124.30; 2.90% × 124.30 = 3.6047 → 3.60 + 0.30
+    const ca = run(paypal, "ca", { shipping: 10, salesTax: 13 });
+    expect(ca.buyerPays).toBe(12430);
+    expect(line(ca, "transaction")).toBe(390);
+    // US international Checkout with conversion: 5.48 fee, then 3% × 94.52 = 2.8356 → 2.84; keep 91.68
+    expect(run(paypal, "us", { payerUs: "intl", currencyConversion: true }).payout).toBe(9168);
+  });
+
+  it("the payer question's help states the surcharge of the payment type picked", () => {
+    const help = (marketId: string, field: string, payType: string) => {
+      const m = paypal.markets.find((x) => x.id === marketId)!;
+      const f = paypal.fields.find((x) => x.id === field)!;
+      const i = { ...paypal.defaults(m), payType } as Inputs;
+      return typeof f.help === "function" ? f.help(i, m) : f.help;
+    };
+    expect(help("us", "payerUs", "checkout")).toContain("+1.5%");
+    expect(help("au", "payerAu", "checkout")).toContain("+1%");
+    expect(help("au", "payerAu", "acdc")).toContain("+2.1%"); // Advanced cards add 2.10%, not 1%
+    expect(help("ca", "payerCa", "charity")).toContain("US +0%"); // 1.60% from Canada and the US
+    expect(help("uk", "payerUk", "micro")).toContain("+1%"); // 5% → 6%
+    expect(help("de", "payerDe", "donation")).toContain("UK +2%");
+    expect(help("de", "payerDe", "gs")).toContain("elsewhere +2.99%");
+  });
+
+  it("refund and surcharge notes only where the fee pages' rules apply", () => {
+    const pos = run(paypal, "us", { payType: "pos" }).notes.join(" ");
+    expect(pos).not.toContain("refund");
+    expect(pos).not.toContain("surcharge");
+    const acdc = run(paypal, "us", { payType: "acdc" }).notes.join(" ");
+    expect(acdc).toContain("$3.18");
+    expect(acdc).not.toContain("surcharge");
+    expect(run(paypal, "us", { payType: "gs" }).notes.join(" ")).toContain("surcharge");
   });
 
   /* ------------------------------------------------------------ reverse mode */

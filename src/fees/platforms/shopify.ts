@@ -170,12 +170,16 @@ const S = {
   pricingUk: "shopify-pricing-uk",
   pricingCa: "shopify-pricing-ca",
   pricingAu: "shopify-pricing-au",
+  billing: "shopify-billing-overview",
   plus: "shopify-plus-plan",
   cardTypes: "shopify-card-rates-us",
   intlCards: "shopify-intl-cards",
   thirdParty: "shopify-third-party-fees",
   withThirdParty: "shopify-payments-with-third-party",
   fx: "shopify-fx-fees",
+  exchangeRates: "shopify-exchange-rates",
+  intlPricing: "shopify-international-pricing",
+  dutiesChange: "shopify-changelog-duties",
   fxCalc: "shopify-fx-calculation",
   payoutFees: "shopify-payout-fees",
   multiCurrency: "shopify-multi-currency-payouts",
@@ -191,9 +195,16 @@ const PRICING_SOURCE: Record<string, string> = { us: S.pricing, uk: S.pricingUk,
 
 const sources: Source[] = [
   { id: S.pricing, title: "Shopify Pricing: Find the Right Plan for Your Business", url: "https://www.shopify.com/pricing", publisher: "Shopify", checked: "2026-10-23" },
-  { id: S.pricingUk, title: "Shopify Pricing (United Kingdom)", url: "https://www.shopify.com/uk/pricing", publisher: "Shopify", checked: "2026-10-23" },
-  { id: S.pricingCa, title: "Shopify Pricing (Canada)", url: "https://www.shopify.com/ca/pricing", publisher: "Shopify", checked: "2026-10-23" },
-  { id: S.pricingAu, title: "Shopify Pricing (Australia)", url: "https://www.shopify.com/au/pricing", publisher: "Shopify", checked: "2026-10-23" },
+  { id: S.pricingUk, title: "Shopify Pricing: Find the Right Plan for Your Business - Shopify UK", url: "https://www.shopify.com/uk/pricing", publisher: "Shopify", checked: "2026-10-23" },
+  { id: S.pricingCa, title: "Shopify Pricing: Find the Right Plan for Your Business - Shopify Canada", url: "https://www.shopify.com/ca/pricing", publisher: "Shopify", checked: "2026-10-23" },
+  { id: S.pricingAu, title: "Shopify Pricing: Find the Right Plan for Your Business - Shopify Australia", url: "https://www.shopify.com/au/pricing", publisher: "Shopify", checked: "2026-10-23" },
+  {
+    id: S.billing,
+    title: "Pricing plans and billing overview",
+    url: "https://help.shopify.com/en/manual/intro-to-shopify/pricing-plans/pricing-overview",
+    publisher: "Shopify Help Center",
+    checked: "2026-10-23",
+  },
   { id: S.plus, title: "Shopify Plus plan", url: "https://help.shopify.com/en/manual/intro-to-shopify/pricing-plans/plans-features/shopify-plus-plan", publisher: "Shopify Help Center", checked: "2026-10-23" },
   {
     id: S.cardTypes,
@@ -225,6 +236,27 @@ const sources: Source[] = [
   },
   { id: S.fx, title: "Fees and costs", url: "https://help.shopify.com/en/manual/international/pricing/fees", publisher: "Shopify Help Center", checked: "2026-10-23" },
   {
+    id: S.exchangeRates,
+    title: "Currency conversions and exchange rates",
+    url: "https://help.shopify.com/en/manual/international/pricing/exchange-rates",
+    publisher: "Shopify Help Center",
+    checked: "2026-10-23",
+  },
+  {
+    id: S.dutiesChange,
+    title: "Shopify duties and import taxes - Now available for all Shopify plans",
+    url: "https://changelog.shopify.com/posts/shopify-duty-calculator-now-available-for-all-shopify-plans",
+    publisher: "Shopify Changelog",
+    checked: "2026-10-23",
+  },
+  {
+    id: S.intlPricing,
+    title: "Pricing for Shopify's international sales tools and Shopify Managed Markets",
+    url: "https://www.shopify.com/international/pricing",
+    publisher: "Shopify",
+    checked: "2026-10-23",
+  },
+  {
     id: S.fxCalc,
     title: "Currency conversion fee calculation for Shopify Payments orders",
     url: "https://help.shopify.com/en/manual/payments/shopify-payments/store-currency/currency-conversion-calculation",
@@ -245,7 +277,7 @@ const sources: Source[] = [
     publisher: "Shopify Help Center",
     checked: "2026-10-23",
   },
-  { id: S.chargeback, title: "Chargeback process", url: "https://help.shopify.com/en/manual/payments/chargebacks/chargeback-process", publisher: "Shopify Help Center", checked: "2026-10-23" },
+  { id: S.chargeback, title: "Responding to chargebacks and inquiries", url:"https://help.shopify.com/en/manual/payments/chargebacks/chargeback-process", publisher: "Shopify Help Center", checked: "2026-10-23" },
   { id: S.refunds, title: "Shopify Payments refunds", url: "https://help.shopify.com/en/manual/payments/shopify-payments/payouts/refunds", publisher: "Shopify Help Center", checked: "2026-10-23" },
   {
     id: S.minimum,
@@ -255,7 +287,7 @@ const sources: Source[] = [
     checked: "2026-10-23",
   },
   { id: S.tax, title: "Shopify Tax pricing", url: "https://help.shopify.com/en/manual/taxes/shopify-tax/pricing", publisher: "Shopify Help Center", checked: "2026-10-23" },
-  { id: S.taxPage, title: "Shopify Tax", url: "https://www.shopify.com/tax", publisher: "Shopify", checked: "2026-10-23" },
+  { id: S.taxPage, title: "Sales tax in the United States | Shopify Tax", url:"https://www.shopify.com/tax", publisher: "Shopify", checked: "2026-10-23" },
   { id: S.starter, title: "Starter plan", url: "https://help.shopify.com/en/manual/intro-to-shopify/pricing-plans/plans-features/shopify-starter-plan", publisher: "Shopify Help Center", checked: "2026-10-23" },
 ];
 
@@ -265,7 +297,7 @@ const changes: FeeChange[] = [
     text: "Australian Shopify Payments rates lowered (listed on Shopify’s Australian pricing page by October 23, 2026; the old rates were still there on September 15): online cards 1.75% → 1.7% on Basic, 1.6% → 1.55% on Grow, 1.4% → 1.35% on Advanced, 1.2% → 1.15% on Plus; in person 1.95% → 1.85%, 1.85% → 1.75%, 1.75% → 1.65%, 1.55% → 1.45%. AmEx and international rates unchanged.",
     source: S.pricingAu,
   },
-  { date: "2026-09-02", text: "By September 2, 2026 the US$5/month Starter plan was closed to new stores. Stores already on it can stay, but can’t switch back after changing plans.", source: S.starter },
+  { date: "2026-09-02", text: "By September 2, 2026 the Starter plan was closed to new stores. Stores already on it can stay, but can’t switch back after changing plans.", source: S.starter },
   {
     date: "2026-05-13",
     text: "Shopify Tax for stores created from May 13, 2026: free on the first $100,000 of lifetime sales (was $100,000 per calendar year), then 0.35% per order in the US (0.25% on Plus), up to $0.99 per order, with no yearly cap.",
@@ -286,7 +318,13 @@ const changes: FeeChange[] = [
     text: "By April 25, 2025 Shopify’s US help center split online card rates into Standard and Premium: business, corporate and commercial cards and every US-issued American Express card pay the higher Premium rate (now 3.5% + 30¢ on Basic instead of 2.9% + 30¢).",
     source: S.cardTypes,
   },
+  { date: "2025-04-25", text: "Canadian Basic plan billed yearly lowered from C$38 to C$37 a month (by April 25, 2025).", source: S.pricingCa },
   { date: "2025-04-05", text: "Trial changed from $1 for the first month to 3 days free, then $1 a month for the first 3 months (most plans).", source: S.pricing },
+  {
+    date: "2025-02-02",
+    text: "Duties and import tax calculation at checkout opened to every plan (it used to need Advanced or Plus). Shopify’s international pricing page lists it at 0.5% per order as an optional add-on, against a regular 0.85% with Shopify Payments and 1.5% without.",
+    source: S.dutiesChange,
+  },
   {
     date: "2024-11-10",
     text: "Canadian rates lowered (by November 10, 2024): Basic online 2.9% → 2.8% + 30¢ and in person 2.7% → 2.6%; Grow online 2.7% → 2.6% + 30¢ and in person 2.6% → 2.5%.",
@@ -368,8 +406,8 @@ function calculate(inputs: Inputs, market: Market) {
       detail: `${whole(monthly, market)}/month (${period}) ÷ ${orders} order${orders > 1 ? "s" : ""}`,
       explain:
         plan === "plus"
-          ? "Shopify Plus is a flat monthly platform fee (lower on a 3-year term), not a per-sale fee. We split it across your orders so you can see what it costs per sale; set your order count under More options."
-          : "Your plan is a flat monthly fee, not a per-sale fee. We split it across a month’s orders so you can see what it costs per sale; set your order count and billing under More options. Yearly billing is charged upfront for 12 months.",
+          ? "Shopify Plus is a flat monthly platform fee (lower on a 3-year term) on your Shopify bill, not a deduction from each sale. We split it across your orders to show its cost per sale; set your order count under More options."
+          : "Your plan is a flat monthly fee on your Shopify bill, not a deduction from each sale. We split it across a month’s orders to show its cost per sale; set your order count and billing under More options (yearly billing is charged upfront for 12 months).",
       source: plan === "plus" ? S.plus : pricing,
     });
     const apps = toCents(num(inputs, "appsMonthly"));
@@ -431,7 +469,6 @@ function calculate(inputs: Inputs, market: Market) {
         market.id === "us"
           ? `Business, corporate and commercial cards, and every US-issued American Express card, are “premium” cards: ${rateText(rate, money)} on ${PLAN_NAME[plan]} instead of ${rateText(std, money)} for a personal card.`
           : `American Express cards cost ${rateText(rate, money)} on ${PLAN_NAME[plan]} instead of ${rateText(std, money)}.`;
-      if (market.id === "us") source = S.cardTypes;
     } else if (cardType === "international") {
       if (d.intl) {
         rate = d.intl[plan];
@@ -539,7 +576,7 @@ function calculate(inputs: Inputs, market: Market) {
       amount: capped ? st.cap : raw,
       kind: "platform",
       detail: capped ? `${formatRate(rate)} would be ${money(raw)}, capped at ${money(st.cap)}` : `${formatRate(rate)} × ${money(gross)}`,
-      explain: `Once your store passes ${whole(st.threshold, market)} in sales, Shopify Tax charges ${formatRate(rate)} on orders to places where you collect tax, up to ${money(st.cap)} per order. It’s added to your Shopify bill.`,
+      explain: `Once your store’s sales reach ${whole(st.threshold, market)} (lifetime for stores opened from May 13, 2026, each calendar year for older ones), Shopify Tax charges ${formatRate(rate)} on orders to places where you collect tax, up to ${money(st.cap)} per order, on your Shopify bill. Shopify doesn’t say whether shipping and tax count toward the order, so we use the whole order.`,
       source: S.tax,
     });
   }
@@ -604,7 +641,7 @@ function schedule(market: Market): ScheduleRow[] {
       amount: tiers(d.premium),
       appliesTo: "Everything the customer pays",
       when: market.id === "us" ? "US business/corporate cards and all US American Express" : byPlanNote,
-      source: market.id === "us" ? S.cardTypes : pricing,
+      source: pricing,
     },
     {
       fee: "International cards",
@@ -650,7 +687,7 @@ function schedule(market: Market): ScheduleRow[] {
       fee: "Shopify Tax",
       amount: `${formatRate(d.shopifyTax.nonPlus)} (Plus ${formatRate(d.shopifyTax.plus)}), max ${money(d.shopifyTax.cap)} per order`,
       appliesTo: "Orders where you collect tax",
-      when: `After ${whole(d.shopifyTax.threshold, market)} in sales`,
+      when: `After ${whole(d.shopifyTax.threshold, market)} in sales (lifetime; each year for stores opened before May 13, 2026)`,
       source: S.tax,
     });
   rows.push({ fee: "POS Pro", amount: `${whole(d.posPro, market)} a month per location`, appliesTo: "Each store location", when: "Optional (Plus includes 20)", source: pricing });
@@ -786,7 +823,7 @@ export const shopify: CalculatorDef = {
       min: 0,
       max: 1000000,
       unit: "orders",
-      help: "We split your plan fee across these orders. Set 0 to leave the plan out.",
+      help: "We split your plan fee across these orders. Set 0 to leave the plan out, for example to match a payout.",
     },
     { id: "channel", kind: "select", label: "Where was the sale made?", section: "options", advanced: true, options: channelOptions, help: "In-person payments cost less than online ones.", showIf: usesShopifyPayments },
     {
@@ -813,7 +850,7 @@ export const shopify: CalculatorDef = {
       label: "I use Shopify Tax and my store is past the free threshold",
       section: "options",
       advanced: true,
-      help: "Free until your store reaches 100,000 in sales, then a small fee per taxed order.",
+      help: "Free until your store’s sales reach 100,000 in your currency, then a small fee on each taxed order.",
       showIf: (_i, m) => Boolean(dataFor(m).shopifyTax),
     },
     { id: "appsMonthly", kind: "money", label: "Apps & other monthly subscriptions", section: "options", advanced: true, help: "Split across your orders like the plan fee." },
@@ -849,19 +886,32 @@ export const shopify: CalculatorDef = {
   }),
   calculate,
   breakpoints: (inputs, market) => {
-    // Card fees (with their fixed part) start only once the order is more than the gift card
-    // covers, so the payout drops at that price. Find the first price where a card is charged.
-    if (toCents(num(inputs, "giftCard")) <= 0) return [];
-    const charged = (p: number) => orderAmounts(inputs, market, p).card > 0;
-    let lo = 0;
-    let hi = 100_000_000;
-    if (!charged(hi)) return [];
-    while (lo < hi) {
-      const mid = Math.floor((lo + hi) / 2);
-      if (charged(mid)) hi = mid;
-      else lo = mid + 1;
+    // Where the formula changes shape as the price rises:
+    //  - the first price where something is charged to a card: the card fee and its fixed part
+    //    start there (the payout drops), and a gift card stops covering the whole order;
+    //  - with Shopify Tax on, the first price where the fee hits its per-order cap.
+    const CEIL = 100_000_000;
+    const first = (hit: (p: number) => boolean): number | null => {
+      if (!hit(CEIL)) return null;
+      let lo = 0;
+      let hi = CEIL;
+      while (lo < hi) {
+        const mid = Math.floor((lo + hi) / 2);
+        if (hit(mid)) hi = mid;
+        else lo = mid + 1;
+      }
+      return lo;
+    };
+    const out: number[] = [];
+    const charged = first((p) => orderAmounts(inputs, market, p).card > 0);
+    if (charged !== null) out.push(charged);
+    const st = dataFor(market).shopifyTax;
+    if (st && bool(inputs, "shopifyTax")) {
+      const rate = planOf(inputs) === "plus" ? st.plus : st.nonPlus;
+      const capped = first((p) => pct(orderAmounts(inputs, market, p).gross, rate) > st.cap);
+      if (capped !== null) out.push(capped);
     }
-    return [lo];
+    return out.filter((b) => b > 0).sort((a, b) => a - b);
   },
   verifiedAt: "2026-10-23",
   sources,

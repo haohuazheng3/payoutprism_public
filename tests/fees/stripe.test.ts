@@ -236,6 +236,32 @@ describe("stripe", () => {
     expect(run(stripe, "us", { radar: "standard" }).fees.find((l) => l.id === "radar")!.explain).not.toContain("free until");
   });
 
+  it("Radar Plus is not part of the free Standard trial: former Radar for Fraud Teams accounts pay from January 22, 2027", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-23T12:00:00Z"));
+    const plus = run(stripe, "us", { radar: "plus" }).fees.find((l) => l.id === "radar")!;
+    expect(plus.amount).toBe(7);
+    expect(plus.explain).not.toContain("free until");
+    expect(plus.explain).toContain("Radar for Fraud Teams");
+    const pro = run(stripe, "us", { radar: "pro" }).fees.find((l) => l.id === "radar")!;
+    expect(pro.explain).not.toContain("January 22, 2027");
+  });
+
+  it("refund note: Stripe keeps the processing fee and the conversion fee", () => {
+    // $100 international card in a foreign currency: 4.4% → $4.40 + $0.30 = $4.70; 1% → $1.00
+    const r = run(stripe, "us", { cardFrom: "international", fx: true });
+    expect(r.notes).toContain("If you refund this payment, Stripe keeps its $4.70 processing fee and the $1.00 conversion fee.");
+    expect(run(stripe, "us").notes).toContain("If you refund this payment, Stripe keeps its $3.20 processing fee.");
+  });
+
+  it("UK Pay by Bank 0.5% + 20p capped at £5; Australia rounds half up (A$10 → 16.5¢ → 17¢)", () => {
+    // £958.99: 479.495p → 479p + 20p = 499p; £959: 479.5p → 480p + 20p = 500p = cap; £2,000 → cap
+    expect(line(run(stripe, "uk", { method: "pay_by_bank", price: 958.99 }), "processing")).toBe(499);
+    expect(line(run(stripe, "uk", { method: "pay_by_bank", price: 959 }), "processing")).toBe(500);
+    expect(line(run(stripe, "uk", { method: "pay_by_bank", price: 2000 }), "processing")).toBe(500);
+    expect(line(run(stripe, "au", { price: 10 }), "processing")).toBe(17 + 30);
+  });
+
   it("warns below Stripe's minimum charge", () => {
     expect(run(stripe, "us", { price: 0.49 }).warnings.length).toBe(1);
     expect(run(stripe, "us", { price: 0.5 }).warnings.length).toBe(0);
@@ -247,6 +273,21 @@ describe("stripe", () => {
   });
 
   /* ---------------- reverse mode ---------------- */
+
+  it("breakpoints: Instant Payout minimum and a partly won dispute", () => {
+    const us = M.us;
+    // $34.29: 2.9% = 99.441¢ → 99¢ + 30¢ → nets $33.00, and 1.5% of $33.00 = 49.5¢ → 50¢ = the minimum; $34.28 nets $32.99
+    const ip = { ...stripe.defaults(us), instantPayout: true };
+    expect(stripe.breakpoints!(ip, us)).toEqual([3429]);
+    expect(line(run(stripe, "us", { price: 34.29, instantPayout: true }), "instantPayout")).toBe(50);
+    expect(line(run(stripe, "us", { price: 1000, instantPayout: true }), "instantPayout")).toBe(1456); // 1.5% × $970.70 = $14.5605
+    const partial = { ...stripe.defaults(us), dispute: "partial", disputeWon: 50 };
+    expect(stripe.breakpoints!(partial, us)).toEqual([5000]);
+    // Keep $10 after a $50-won dispute: a − round(2.9% a) − 30¢ − $30 ≥ $10 → $41.50 (2.9% = $1.2035 → $1.20)
+    const s = solvePrice(stripe, partial, us, "payout", 1000);
+    expect(s.price).toBe(4150);
+    expect(stripe.calculate({ ...partial, price: 41.49 }, us).payout).toBeLessThan(1000);
+  });
 
   it("reverse mode across the ACH cap and the Bacs minimum", () => {
     const us = M.us;

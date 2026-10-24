@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import amazon, { getCategory, refundAdminFee, referralFee, PROFESSIONAL_MONTHLY, INDIVIDUAL_PER_ITEM } from "@/fees/platforms/amazon";
+import amazon, { getCategory, printerNote, refundAdminFee, referralFee, PRINTER_CATEGORY_DATE, PROFESSIONAL_MONTHLY, INDIVIDUAL_PER_ITEM } from "@/fees/platforms/amazon";
 import { solvePrice } from "@/fees/solve";
 import { M } from "@/fees/markets";
 import { checkContract, line, run } from "./helpers";
@@ -124,6 +124,46 @@ describe("amazon (merchant fulfilled)", () => {
     expect(r.notes.some((n) => n.includes("$20.01") && n.includes("17%"))).toBe(true);
     const above = run(amazon, "us", { category: "clothing", price: 18, shippingCharged: 3 });
     expect(above.notes.some((n) => n.includes("$17.00") && n.includes("$2.00"))).toBe(true);
+  });
+
+  it("3D printers: note switches when the new fee category starts on October 31, 2026; 12% stays until Amazon publishes a rate", () => {
+    expect(printerNote(PRINTER_CATEGORY_DATE - 1)).toContain("get their own fee category on October 31, 2026");
+    expect(printerNote(PRINTER_CATEGORY_DATE)).toContain("Since October 31, 2026");
+    const r = run(amazon, "us", { category: "business-industrial", price: 100, shippingCharged: 0 });
+    expect(line(r, "referral")).toBe(1200);
+    expect(r.notes.some((n) => n.includes("3D printers"))).toBe(true);
+    expect(r.notes.length).toBeLessThanOrEqual(3);
+  });
+
+  it("refund note uses the lesser of $5.00 or 20% of the referral fee", () => {
+    expect(run(amazon, "us").notes.some((n) => n.includes("$0.90"))).toBe(true); // 20% × $4.50
+    expect(run(amazon, "us", { price: 300, shippingCharged: 0 }).notes.some((n) => n.includes("$5.00 per item") && n.includes("of $5.00"))).toBe(true); // 20% × $45 = $9 → $5
+  });
+
+  it("hand-computed edges: shipping pushes a bracket over its edge, Fine Art bands, French DSF", () => {
+    // Beauty $9.99 + $0.01 shipping = $10.00 → 8% = $0.80; + $0.02 shipping = $10.01 → 15% = $1.5015 → $1.50.
+    expect(line(run(amazon, "us", { category: "beauty", price: 9.99, shippingCharged: 0.01 }), "referral")).toBe(80);
+    expect(line(run(amazon, "us", { category: "beauty", price: 9.99, shippingCharged: 0.02 }), "referral")).toBe(150);
+    // Lawn mower $499.99 + $0.02 shipping = $500.01 → 8% of the whole = $40.0008 → $40.00.
+    expect(line(run(amazon, "us", { category: "lawn-mowers", price: 499.99, shippingCharged: 0.02 }), "referral")).toBe(4000);
+    // Clothing $14.99 → 5% = $0.7495 → $0.75; $5.00 → 5% = $0.25 → $0.30 minimum.
+    expect(ref("clothing", 14.99)).toBe(75);
+    expect(ref("clothing", 5)).toBe(30);
+    // Fine Art: $1,000 → $20 + $135 = $155; $5,000 → $555; $5,000.01 → $555.0005 → $555.00.
+    expect(ref("fine-art", 1000)).toBe(15500);
+    expect(ref("fine-art", 5000)).toBe(55500);
+    expect(ref("fine-art", 5000.01)).toBe(55500);
+    // Jewelry $1,000 → $50 + 5% × $750 = $87.50; watch $2,000 → $240 + $15 = $255.
+    expect(ref("jewelry", 1000)).toBe(8750);
+    expect(ref("watches", 2000)).toBe(25500);
+    // France-established Individual seller, $20 book: 3% of $3.00 = 9¢, of $1.80 = 5.4¢ → 6¢, of $0.99 = 2.97¢ → 3¢.
+    const fr = run(amazon, "us", { category: "media", plan: "individual", price: 20, shippingCharged: 0, establishment: "fr" });
+    expect([line(fr, "referral"), line(fr, "closing"), line(fr, "per-item"), line(fr, "dsf")]).toEqual([300, 180, 99, 18]);
+  });
+
+  it("blurb and schedule don't understate the lowest referral rates", () => {
+    expect(amazon.blurb).not.toMatch(/8[–-]45%/);
+    expect(amazon.schedule(M.us).find((r) => r.fee === "Referral fee")!.amount).toContain("15% in most categories");
   });
 
   it("reverse mode finds the lowest price that pays the target", () => {

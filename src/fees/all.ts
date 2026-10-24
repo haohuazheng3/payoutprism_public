@@ -5,12 +5,35 @@ import ebay from "./platforms/ebay";
 import paypal from "./platforms/paypal";
 import amazon from "./platforms/amazon";
 import amazonFba from "./platforms/amazon-fba";
+import poshmark from "./platforms/poshmark";
+import mercari from "./platforms/mercari";
 import stripe from "./platforms/stripe";
+import venmo from "./platforms/venmo";
+import cashApp from "./platforms/cash-app";
 import shopify from "./platforms/shopify";
+import depop from "./platforms/depop";
+import stockx from "./platforms/stockx";
 import square from "./platforms/square";
+import whatnot from "./platforms/whatnot";
+import tiktokShop from "./platforms/tiktok-shop";
+import facebookMarketplace from "./platforms/facebook-marketplace";
+import upwork from "./platforms/upwork";
+import fiverr from "./platforms/fiverr";
+import airbnb from "./platforms/airbnb";
+import goat from "./platforms/goat";
+import walmart from "./platforms/walmart";
+import grailed from "./platforms/grailed";
+import reverb from "./platforms/reverb";
+import vinted from "./platforms/vinted";
+import offerup from "./platforms/offerup";
+import swappa from "./platforms/swappa";
+import gofundme from "./platforms/gofundme";
+import kickstarter from "./platforms/kickstarter";
+import patreon from "./platforms/patreon";
+import gumroad from "./platforms/gumroad";
 
 /** Every calculator, in the order menus list them (by how often people look for them). */
-export const ALL: CalculatorDef[] = [etsy, ebay, paypal, amazon, amazonFba, stripe, shopify, square];
+export const ALL: CalculatorDef[] = [etsy, ebay, paypal, amazon, amazonFba, poshmark, mercari, stripe, venmo, cashApp, shopify, depop, stockx, square, whatnot, tiktokShop, facebookMarketplace, upwork, fiverr, airbnb, goat, walmart, grailed, reverb, vinted, offerup, swappa, gofundme, kickstarter, patreon, gumroad];
 
 export function getCalculator(slug: string): CalculatorDef {
   const def = ALL.find((d) => d.slug === slug);

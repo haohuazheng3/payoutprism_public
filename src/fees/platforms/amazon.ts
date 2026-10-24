@@ -51,6 +51,7 @@ export const AMZ = {
   news2026: "amazon-2026-news",
   nsp: "amazon-nsp-2026",
   b2b: "amazon-b2b-bulk",
+  b2bNews: "amazon-b2b-bulk-news",
 } as const;
 
 /** Sources shared by both Amazon calculators. */
@@ -82,6 +83,13 @@ export const AMAZON_SOURCES: Source[] = [
   },
   { id: AMZ.nsp, title: "New Selection Program - 2026", url: `${HELP}GB36EVK8V94P8J5D`, publisher: "Amazon Seller Central Help", checked: "2026-10-23" },
   { id: AMZ.b2b, title: "Amazon Business bulk order fee discount", url: `${HELP}G2G7KPB963EMPEYD`, publisher: "Amazon Seller Central Help", checked: "2026-10-23" },
+  {
+    id: AMZ.b2bNews,
+    title: "New Amazon Business bulk order referral fee discount as of October 1",
+    url: "https://sellercentral.amazon.com/seller-forums/discussions/t/e692b3c2-dfae-45c5-a1f4-80a8283244ab",
+    publisher: "Amazon Seller Forums (News_Amazon announcement)",
+    checked: "2026-10-23",
+  },
 ];
 
 /* ------------------------------------------------------------- categories */
@@ -276,7 +284,7 @@ export function bracketEdges(c: RefCategory): number[] {
  * it, or how much dropping to the edge would save. `base` and `priceShift` are in cents; the
  * price shown is the item price (base − shipping − gift wrap).
  */
-export function bracketNote(c: RefCategory, base: number, priceShift: number): string | null {
+export function bracketNote(c: RefCategory, base: number, priceShift: number, shiftLabel = "shipping and gift wrap"): string | null {
   if (c.kind !== "bracket") return null;
   const tiers = c.tiers!;
   const idx = tiers.findIndex((t) => t.upTo === null || base <= t.upTo);
@@ -287,7 +295,7 @@ export function bracketNote(c: RefCategory, base: number, priceShift: number): s
   // Just below an edge where the rate goes up.
   if (next && next.rate > cur.rate && cur.upTo !== null && cur.upTo - base <= 300) {
     const above = referralFee(c, cur.upTo + 1).amount;
-    const extra = priceShift ? " including shipping and gift wrap" : "";
+    const extra = priceShift ? ` including ${shiftLabel}` : "";
     return `${c.label}: your total of ${usd(base)}${extra} is in the ${formatRate(cur.rate)} band (${usd(cur.upTo)} or less). At ${usd(cur.upTo + 1)} the whole amount pays ${formatRate(next.rate)}: ${usd(above)} instead of ${usd(fee)}.`;
   }
   // Just above an edge where the rate went up: dropping to the edge saves money.
@@ -417,6 +425,19 @@ export function refundNote(c: RefCategory, referral: number): string {
   return `If you refund this order, Amazon returns the referral fee minus a refund administration fee of ${usd(admin)} (20% of it, never more than $5.00 per item).`;
 }
 
+/** 3D printers leave Business, Industrial & Scientific Supplies for their own fee category (GFD6HLGAEZC9VBGJ). */
+export const PRINTER_CATEGORY_DATE = Date.UTC(2026, 9, 31, 7); // October 31, 2026, 00:00 Pacific
+
+/**
+ * Note for the Business, Industrial & Scientific category about the new "3D Printers" fee category.
+ * Amazon had not published the new category's rate on 2026-10-23, so the 12% stays in the calculation.
+ */
+export function printerNote(at: number = Date.now()): string {
+  return at < PRINTER_CATEGORY_DATE
+    ? "3D printers and 3D printing pens get their own fee category on October 31, 2026. Amazon hasn’t published its rate yet, so this uses today’s 12%."
+    : "Since October 31, 2026, 3D printers and 3D printing pens have their own fee category, whose rate Amazon hadn’t published when we last checked. The 12% here still applies to accessories such as nozzles and filament.";
+}
+
 /* ------------------------------------------------------------------ module */
 
 const changes: FeeChange[] = [
@@ -439,7 +460,7 @@ const changes: FeeChange[] = [
   {
     date: "2025-10-01",
     text: "Amazon Business bulk order discount: lower referral rates on the part of a business order above $1,000 for one product, when you offer at least 3% off through business or quantity pricing.",
-    source: AMZ.b2b,
+    source: AMZ.b2bNews,
   },
   { date: "2024-11-19", text: "Amazon announced no increase to US referral fees or FBA fees for 2025, after lowering referral fees on low-priced clothing in 2024 (5% up to $15, 10% from $15 to $20).", source: AMZ.news2025 },
 ];
@@ -487,7 +508,7 @@ function calculate(inputs: Inputs, market: Market) {
   const notes: string[] = [];
   const bn = bracketNote(cat, base, shipping + giftWrap);
   if (bn) notes.push(bn);
-  if (cat.id === "business-industrial") notes.push("3D printers and 3D printing pens get their own fee category on October 31, 2026. Amazon hasn’t published its rate yet, so this uses today’s 12%.");
+  if (cat.id === "business-industrial") notes.push(printerNote());
   notes.push(refundNote(cat, ref.amount));
 
   const warnings: string[] = [];
@@ -510,7 +531,7 @@ function schedule(): ScheduleRow[] {
     { fee: "Individual plan", amount: "$0.99 per unit", appliesTo: "Each unit sold (no monthly fee)", when: "Individual plan only", source: AMZ.perItem },
     {
       fee: "Referral fee",
-      amount: "8%–45% by category, most 15%",
+      amount: "15% in most categories; each category’s rate below",
       appliesTo: "Item price + shipping + gift wrap (not sales tax), per unit",
       when: "Every sale; the greater of the rate or the category minimum (usually $0.30)",
       source: AMZ.referral,
@@ -526,11 +547,11 @@ function schedule(): ScheduleRow[] {
     });
   }
   rows.push(
-    { fee: "Closing fee", amount: "$1.80 per unit", appliesTo: "Books, DVD, music, software, video games, consoles, gaming accessories", source: AMZ.closing },
+    { fee: "Closing fee", amount: "$1.80 per unit", appliesTo: "Books, DVD, music, software, video games, consoles, gaming accessories", when: "Each unit sold, on either plan", source: AMZ.closing },
     { fee: "Refund administration fee", amount: "20% of the referral fee, max $5.00", appliesTo: "Per refunded item (not books, music, video or DVD on a full refund)", when: "When you refund an order", source: AMZ.refund },
     { fee: "Digital services fee", amount: "2% (UK) or 3% (France, Italy, Spain)", appliesTo: "Amazon’s selling fees (UK/France: FBA fees too)", when: "Sellers established in those countries", source: AMZ.dsf },
-    { fee: "High-volume listing fee", amount: "$0.001 per SKU / month", appliesTo: "Active SKUs above 1.5 million", source: AMZ.schedule },
-    { fee: "Rental book service fee", amount: "$5.00 per book", appliesTo: "Each textbook rented", source: AMZ.schedule },
+    { fee: "High-volume listing fee", amount: "$0.001 per SKU / month", appliesTo: "Active SKUs above 1.5 million", when: "Monthly, only above 1.5 million SKUs", source: AMZ.schedule },
+    { fee: "Rental book service fee", amount: "$5.00 per book", appliesTo: "Each textbook rented", when: "Textbook rentals only", source: AMZ.schedule },
   );
   return rows;
 }
@@ -585,7 +606,7 @@ export const amazon: CalculatorDef = {
   category: "marketplaces",
   priceNoun: "item price",
   sellerNoun: "seller",
-  blurb: "8–45% referral fee by category (most 15%, min $0.30) + $39.99/month or $0.99/item",
+  blurb: "15% referral fee in most categories (min $0.30) + $39.99/month or $0.99/item",
   markets: [M.us],
   defaultMarket: "us",
   priceField: "price",

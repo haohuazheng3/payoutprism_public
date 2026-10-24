@@ -11,9 +11,11 @@
  *  - Size tier from the packaged dimensions and unit weight (2026 tiers): Small standard (≤16 oz,
  *    ≤15×12×0.75 in), Large standard (≤20 lb, ≤18×14×8 in), Small Bulky (≤50 lb, ≤37×28×20 in,
  *    length + girth ≤130 in), Large Bulky (≤50 lb, ≤59×33×33 in, ≤130 in), else Extra-Large in four
- *    weight bands. Dimensional weight = L × W × H ÷ 139; for Bulky and Extra-Large the width and
- *    height count as at least 2 in. Shipping weight = unit weight for Small standard and
- *    Extra-Large 150+ lb, otherwise the greater of unit and dimensional weight. Amazon adds no
+ *    weight bands set by the greater of unit and dimensional weight (the size-tier page's footnote:
+ *    "Shipping weight is the greater of unit weight or dimensional weight for determining size
+ *    tiers"). Dimensional weight = L × W × H ÷ 139; for Bulky and Extra-Large the width and height
+ *    count as at least 2 in. The weight the fee is looked up with = unit weight for Small standard
+ *    and Extra-Large 150+ lb, otherwise the greater of unit and dimensional weight. Amazon adds no
  *    separate packaging weight: "unit weight" is the weight of the packaged item.
  *  - Fulfillment fee from the rate card for the fee type (apparel = the Clothing and Accessories
  *    category, dangerous goods, everything else), the season (holiday peak Oct 15, 2026 – Jan 14,
@@ -46,7 +48,7 @@ import {
   planLine,
   referralExplain,
   referralFee,
-  refundNote,
+  refundAdminFee,
 } from "./amazon";
 
 /* ------------------------------------------------------------------ sources */
@@ -271,7 +273,9 @@ export function sizeTier(dims: number[], unitWeight: number): SizeInfo {
   const usesDim = dimB > W;
   if (le(sw, 50) && le(L, 37) && le(Mi, 28) && le(S, 20) && le(lg, 130)) return { ...base, tier: "small-bulky", dimWeight: dimB, shippingWeight: sw, usesDim, overmax: false };
   if (le(sw, 50) && le(L, 59) && le(Mi, 33) && le(S, 33) && le(lg, 130)) return { ...base, tier: "large-bulky", dimWeight: dimB, shippingWeight: sw, usesDim, overmax: false };
-  if (W > 150 + EPS) return { ...base, tier: "xl-150-plus", dimWeight: dimB, shippingWeight: W, usesDim: false, overmax: false };
+  // "Product size tiers" (GG5KW835AHDJCH8W): the tier is set by the greater of unit and dimensional
+  // weight ("Over 150 lb" for Extra-Large 150+ lb), but that tier's fee uses the unit weight only.
+  if (sw > 150 + EPS) return { ...base, tier: "xl-150-plus", dimWeight: dimB, shippingWeight: W, usesDim: false, overmax: false };
   // Overmax as Amazon words it: Extra-Large up to 150 lb that is over 96 in long or over 130 in length + girth.
   const overmax = L > 96 + EPS || lg > 130 + EPS;
   const tier: SizeTier = le(sw, 50) ? "xl-0-50" : le(sw, 70) ? "xl-50-70" : "xl-70-150";
@@ -302,6 +306,7 @@ export function weightBand(s: SizeInfo, feeType: FeeType): string {
     return `${fmtLb(3 + (n - 1) * step)}+ to ${fmtLb(3 + n * step)} lb`;
   }
   const n = Math.max(1, ceilE(w));
+  if (s.tier === "xl-150-plus" && n <= 151) return "151 lb or less";
   return n <= 1 ? "1 lb or less" : `${n - 1}+ to ${n} lb`;
 }
 
@@ -503,8 +508,8 @@ const changes: FeeChange[] = [
   },
   {
     date: "2026-01-15",
-    text: "2026 rate cards: standard-size fees rise by $0.08 per unit on average with a new over-$50 price band; a new Small Bulky tier; Bulky items lose the SIPP discount but non-SIPP Bulky items pay a $1.51–$4.04 packaging fee; an Overmax fee of $17–$25 for very long Extra-Large items; inbound placement fees get finer weight bands.",
-    source: S.fba,
+    text: "2026 rate cards: FBA fees rise by $0.08 per unit on average. Standard-size items priced over $50 now pay more than those priced $10–$50 (they paid the same in 2025); a new Small Bulky tier; Bulky fees drop and the Bulky SIPP discount ($1.32) ends, but Bulky items not in SIPP pay a $1.51–$4.04 packaging fee; Extra-Large items over 96 in long or 130 in length + girth pay a new $17–$25 Overmax fee; inbound placement fees get finer weight bands; the aged inventory surcharge for 366–455 days goes from $0.15 to $0.30 per unit minimum, with a new 456+ day tier ($7.90 per cu ft or $0.35 per unit).",
+    source: AMZ.summary2026,
   },
   {
     date: "2026-01-01",
@@ -527,6 +532,9 @@ function describeWeight(s: SizeInfo): string {
   const oz = (lb: number) => `${Number((lb * 16).toFixed(1))} oz`;
   const lbs = (lb: number) => `${Number(lb.toFixed(2))} lb`;
   const f = s.tier === "small-standard" ? oz : lbs;
+  if (s.tier === "xl-150-plus" && s.dimWeight > s.unitWeight && s.unitWeight <= 150) {
+    return `unit weight ${lbs(s.unitWeight)} (its ${lbs(s.dimWeight)} dimensional weight puts it in the 150+ lb tier, whose fee uses the unit weight)`;
+  }
   if (s.tier === "small-standard" || s.tier === "xl-150-plus") return `unit weight ${f(s.unitWeight)}`;
   return s.usesDim ? `dimensional weight ${lbs(s.dimWeight)} (more than the ${lbs(s.unitWeight)} unit weight)` : `unit weight ${lbs(s.unitWeight)} (dimensional weight ${lbs(s.dimWeight)})`;
 }
@@ -645,7 +653,7 @@ function calculate(inputs: Inputs, market: Market) {
       amount: roundCents(cuft * rate * months),
       kind: "other",
       detail: `${cuftText} × ${money(rate)} × ${Number(months.toFixed(2))} month${months === 1 ? "" : "s"}`,
-      explain: `Charged each month for the space a unit takes: ${money(rate)} per cubic foot for ${dg ? "dangerous goods, " : ""}${oversize ? "oversize" : "standard-size"} items in ${sSeason === "peak" ? "October–December" : "January–September"}. Faster-selling stock pays less per unit sold.`,
+      explain: `Charged each month for the space a unit takes: ${money(rate)} per cubic foot for ${dg ? "dangerous goods, " : ""}${oversize ? "oversize" : "standard-size"} items in ${sSeason === "peak" ? "October–December" : "January–September"}. Faster-selling stock pays less per unit sold; set how long a unit waits under “More options”.`,
       source: S.storage,
     });
     const util = UTILIZATION[str(inputs, "utilization", "below22")] ?? UTILIZATION.below22;
@@ -703,17 +711,19 @@ function calculate(inputs: Inputs, market: Market) {
     `Size tier: ${TIER_LABEL[s.tier]}${s.overmax ? " (Overmax)" : ""}, fee weight ${weightBand(s, feeType)} from the ${describeWeight(s)}. Amazon re-measures items and charges by its own measurements if they differ.`,
   );
   const cliff = priceCliffNote(s, feeType, season, price);
-  const bn = bracketNote(cat, base, giftWrap);
+  const bn = bracketNote(cat, base, giftWrap, "gift wrap");
   if (cliff) notes.push(cliff);
   else if (bn) notes.push(bn);
-  notes.push(
+  const seasonText =
     season === "peak"
-      ? "Not included: the low-inventory-level fee (stock under 28 days of supply), returns processing above your category’s return-rate threshold, and the aged inventory surcharge after 180 days."
+      ? ""
       : Date.now() >= PEAK_END
-        ? "Amazon hasn’t published its fulfillment fees for 2027 yet. These are its 2026 non-peak rates, the latest it has published."
-        : "These are the 2026 non-peak rates. Units shipped from October 15, 2026 to January 14, 2027 pay the higher holiday peak rates.",
+        ? "Amazon hasn’t published its fulfillment fees for 2027 yet: these are its 2026 non-peak rates, the latest it has published. "
+        : "These are the 2026 non-peak rates; units shipped October 15, 2026 – January 14, 2027 pay the higher holiday peak rates. ";
+  const admin = refundAdminFee(cat, ref.amount);
+  notes.push(
+    `${seasonText}Not included: the low-inventory-level fee (stock under 28 days of supply), returns processing above your category’s return-rate threshold, the aged inventory surcharge after 180 days${admin ? `, and the ${money(admin)} refund administration fee Amazon keeps from the referral fee if you refund the order` : ""}.`,
   );
-  notes.push(refundNote(cat, ref.amount));
 
   const warnings: string[] = [];
   if (num(inputs, "weight") <= 0 || s.cubicFeet <= 0) warnings.push("Enter the packaged dimensions and weight: FBA fees depend on them.");
@@ -760,7 +770,7 @@ function schedule(): ScheduleRow[] {
   const trio = (b: Band) => `${money(b[0])} / ${money(b[1])} / ${money(b[2])}`;
   const per = "Per unit; price under $10 / $10–$50 / over $50";
   const rows: ScheduleRow[] = [
-    { fee: "Referral fee", amount: "8%–45% by category, most 15%", appliesTo: "Item price + gift wrap (not sales tax), per unit", when: "Every sale; greater of the rate or the category minimum (usually $0.30)", source: AMZ.referral },
+    { fee: "Referral fee", amount: "15% in most categories (see the Amazon fee calculator)", appliesTo: "Item price + gift wrap (not sales tax), per unit", when: "Every sale; greater of the rate or the category minimum (usually $0.30)", source: AMZ.referral },
   ];
   SMALL_MAX_OZ.forEach((m, i) => rows.push({ fee: `Fulfillment: small standard, ${i === 0 ? "2 oz or less" : `${SMALL_MAX_OZ[i - 1]}+ to ${m} oz`}`, amount: trio(card.small[i]), appliesTo: per, when, source: S.fba }));
   LARGE_MAX_LB.forEach((m, i) => {
@@ -784,11 +794,11 @@ function schedule(): ScheduleRow[] {
     { fee: "Aged inventory surcharge", amount: "$0.50–$5.90 / cu ft; $6.90 or $0.30/unit (366–455 days); $7.90 or $0.35/unit (456+)", appliesTo: "Units older than 180 days", when: "Assessed on the 15th of each month", source: S.aged },
     { fee: "Low-inventory-level fee", amount: "$0.32–$2.09 per unit", appliesTo: "Units shipped", when: "Both 30- and 90-day supply under 28 days", source: S.lowInventory },
     { fee: "Inbound placement fee", amount: "$0.14–$1.90 (standard), $0.55–$6.50 (Bulky); free with 5+ locations", appliesTo: "Units sent in", when: "Minimal or partial shipment splits", source: S.placement },
-    { fee: "SIPP discount", amount: "−$0.04 to −$0.23", appliesTo: "Standard-size units certified for SIPP", source: S.sipp },
+    { fee: "SIPP discount", amount: "−$0.04 to −$0.23", appliesTo: "Standard-size units certified for SIPP", when: "Each certified unit shipped", source: S.sipp },
     { fee: "Bulky packaging fee", amount: "$1.51–$4.04", appliesTo: "Small / Large Bulky units not in SIPP", when: "By dimensional weight", source: S.sipp },
     { fee: "Overmax handling fee", amount: "$17 / $21 / $25", appliesTo: "Extra-Large up to 50 / 70 / 150 lb", when: "Over 96 in long or 130 in length + girth", source: S.overmax },
-    { fee: "Lithium battery fee", amount: "$0.11 per unit", appliesTo: "Products with lithium batteries", source: S.lithium },
-    { fee: "Selling plan", amount: "$39.99 / month or $0.99 per unit", appliesTo: "Professional / Individual", source: AMZ.subscription },
+    { fee: "Lithium battery fee", amount: "$0.11 per unit", appliesTo: "Products with lithium batteries", when: "Each unit shipped", source: S.lithium },
+    { fee: "Selling plan", amount: "$39.99 / month or $0.99 per unit", appliesTo: "Professional / Individual", when: "Monthly / each unit sold", source: AMZ.subscription },
   );
   return rows;
 }
@@ -847,7 +857,18 @@ const fields: FieldDef[] = [
     ],
     help: "Amazon charges higher fulfillment fees on units shipped during the holiday peak.",
   },
-  { id: "storageMonths", kind: "number", label: "Months in Amazon’s warehouse", section: "options", unit: "months", min: 0, max: 36, step: 0.5, help: "How long a unit sits before it sells. Storage is charged monthly per cubic foot." },
+  {
+    id: "storageMonths",
+    kind: "number",
+    label: "Months in Amazon’s warehouse",
+    section: "options",
+    advanced: true,
+    unit: "months",
+    min: 0,
+    max: 36,
+    step: 0.5,
+    help: "How long a unit sits before it sells. Storage is charged monthly per cubic foot.",
+  },
   {
     id: "storageSeason",
     kind: "segmented",

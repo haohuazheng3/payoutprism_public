@@ -10,7 +10,8 @@
  *    few are cliffs where the whole sale moves to another rate (handbags, jewelry, bullion,
  *    sneakers). We model one item per order, so the order total is the item's total.
  *  - The per-order fee is a separate statement column ("Final Value Fee - fixed"): $0.30 for
- *    orders of $10.00 or less, $0.40 above (UK £, CA C$; DE €0.35/€0.45; AU Pro $0.30/$0.33).
+ *    orders of $10.00 or less, $0.40 above (UK £, CA C$; DE €0.35/€0.45; AU Pro $0.30/$0.33; UK Home,
+ *    Furniture & DIY 10p up to £10).
  *    eBay doesn't define "order total" further; we use the same total (incl. shipping and tax),
  *    which is how eBay.ca's own 2024 example counts it.
  *  - Promoted Listings (general), the international fee and the performance surcharges are all
@@ -165,14 +166,14 @@ const NA_CATEGORIES: NaCategory[] = [
   { id: "phoneacc", label: "Cell Phone Accessories", group: "Electronics", ns: NS_MOST, st: ST_MOST },
   { id: "cameras", label: "Cameras & Photo", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
   { id: "cameraacc", label: "Camera, Drone & Photo Accessories, Tripods", group: "Electronics", ns: NS_MOST, st: ST_MOST },
-  { id: "laptops", label: "Laptops, Desktops, Tablets, Monitors, Printers, PC Parts", group: "Electronics", ns: NS_MOST, st: ST_CORE },
-  { id: "computers", label: "Other Computers, Tablets & Networking", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
-  { id: "computeracc", label: "Computer Accessories (keyboards, mice, cables)", group: "Electronics", ns: NS_MOST, st: ST_MOST },
+  { id: "laptops", label: "Laptops, desktops, tablets, monitors, printers, CPUs, RAM, motherboards, drives", group: "Electronics", ns: NS_MOST, st: ST_CORE },
+  { id: "computers", label: "Computer parts & networking (graphics cards, routers, other)", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
+  { id: "computeracc", label: "Computer accessories (keyboards, mice, cables, 3D printer parts)", group: "Electronics", ns: NS_MOST, st: ST_MOST },
   { id: "electronics", label: "Consumer Electronics (TV, audio, headphones)", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
   { id: "electronicsacc", label: "Electronics Accessories (batteries, TV/audio/VR accessories)", group: "Electronics", ns: NS_MOST, st: ST_MOST },
   { id: "consoles", label: "Video Game Consoles", group: "Electronics", ns: NS_MOST, st: ST_CORE },
   { id: "videogames", label: "Video Games & Video Game Accessories", group: "Electronics", ns: NS_MOST, st: ST_MOST },
-  { id: "videogamesother", label: "Other Video Games & Consoles items", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
+  { id: "videogamesother", label: "Other Video Games & Consoles items (merchandise, prepaid cards)", group: "Electronics", ns: NS_MOST, st: ST_ELEC },
   { id: "books", label: "Books & Magazines", group: "Books, movies & music", ns: m(15.3, 7500, 2.35), st: m(15.3, 2500, 2.35) },
   { id: "movies", label: "Movies & TV", group: "Books, movies & music", ns: m(15.3, 7500, 2.35), st: m(15.3, 2500, 2.35) },
   { id: "music", label: "Music (CDs, cassettes; not vinyl)", group: "Books, movies & music", ns: m(15.3, 7500, 2.35), st: m(15.3, 2500, 2.35) },
@@ -227,8 +228,10 @@ interface Cat {
   label: string;
   group: string;
   rule: Rule;
+  /** UK: the per-order fee drops to 10p on orders up to £10 (Home, Furniture & DIY listings created since 19 April 2022). */
+  tenPence?: boolean;
 }
-const uk = (id: string, label: string, group: string, rule: Rule): Cat => ({ id, label, group, rule });
+const uk = (id: string, label: string, group: string, rule: Rule, tenPence?: boolean): Cat => ({ id, label, group, rule, tenPence });
 const UK_CATEGORIES: Cat[] = [
   uk("uk-clothes", "Clothes, Shoes & Accessories", "Fashion", m(11.9)),
   uk("uk-trainers", "Trainers (men's & women's)", "Fashion", cliff([{ below: 100, bands: bands(11.9) }, { bands: bands(7) }], "item")),
@@ -237,9 +240,9 @@ const UK_CATEGORIES: Cat[] = [
   uk("uk-watches", "Watches, Parts & Accessories", "Fashion", m(12.9, 750, 3)),
   uk("uk-health", "Health & Beauty", "Fashion", m(10.9)),
   uk("uk-hair", "Hair Extensions & Wigs", "Fashion", m(11.9)),
-  uk("uk-home", "Home, Furniture & DIY (other)", "Home & garden", m(11.9, 500, 7.9)),
-  uk("uk-furniture", "Furniture, Bath, Plumbing & Fixtures", "Home & garden", m(10.9, 500, 7.9, 1000, 3)),
-  uk("uk-appliances", "Appliances, DIY Tools & Workshop Equipment", "Home & garden", m(6.9, 400, 3)),
+  uk("uk-home", "Home, Furniture & DIY (other)", "Home & garden", m(11.9, 500, 7.9), true),
+  uk("uk-furniture", "Furniture, Bath, Plumbing & Fixtures", "Home & garden", m(10.9, 500, 7.9, 1000, 3), true),
+  uk("uk-appliances", "Appliances, DIY Tools & Workshop Equipment", "Home & garden", m(6.9, 400, 3), true),
   uk("uk-powerstrips", "Power Strips & Surge Protectors", "Home & garden", m(9.9, 250, 7.9)),
   uk("uk-garden", "Garden & Patio", "Home & garden", m(10.9)),
   uk("uk-pets", "Pet Supplies", "Home & garden", m(12.9)),
@@ -298,7 +301,7 @@ const AU_CATEGORIES: AuCategory[] = [
   { id: "au-appliances", label: "Home Appliances", group: "Tier 1", tier: 1 },
   { id: "au-home", label: "Home & Garden", group: "Tier 2", tier: 2 },
   { id: "au-toys", label: "Toys & Hobbies", group: "Tier 2", tier: 2 },
-  { id: "au-computers", label: "Computers, Laptops & Tablets", group: "Tier 2", tier: 2 },
+  { id: "au-computers", label: "Laptops, Desktops & Tablets", group: "Tier 2", tier: 2 },
   { id: "au-baby", label: "Baby", group: "Tier 2", tier: 2 },
   { id: "au-pets", label: "Pet Supplies", group: "Tier 2", tier: 2 },
   { id: "au-instruments", label: "Musical Instruments", group: "Tier 2", tier: 2 },
@@ -308,10 +311,10 @@ const AU_CATEGORIES: AuCategory[] = [
   { id: "au-health", label: "Health & Beauty", group: "Tier 4", tier: 4 },
   { id: "au-jewellery", label: "Jewellery & Watches", group: "Tier 4", tier: 4 },
   { id: "au-media", label: "Books, Movies, Music & Video Games", group: "Tier 4", tier: 4 },
-  { id: "au-collectables", label: "Collectables, Antiques, Art, Coins, Stamps, Crafts", group: "Tier 4", tier: 4 },
+  { id: "au-collectables", label: "Collectables, Antiques, Art, Coins, Stamps, Crafts, Dolls, Pottery", group: "Tier 4", tier: 4 },
   { id: "au-sporting", label: "Sporting Goods", group: "Tier 4", tier: 4 },
   { id: "au-business", label: "Business & Industrial", group: "Tier 4", tier: 4 },
-  { id: "au-techacc", label: "Phone, Camera, Computer & Electronics Accessories", group: "Tier 4", tier: 4 },
+  { id: "au-techacc", label: "Tech accessories & parts: phone, camera, computer (incl. components, drives), TV", group: "Tier 4", tier: 4 },
   { id: "au-nft", label: "NFTs", group: "Other", tier: "nft" },
 ];
 
@@ -342,7 +345,7 @@ const DE_CATEGORIES: DeCategory[] = [
   { id: "de-jewelry", label: "Watches & Jewellery (Uhren & Schmuck)", group: "Fashion", rule: m(16, 990, 3), shopRule: m(16, 500, 3) },
   { id: "de-watchparts", label: "Watch Parts & Accessories", group: "Fashion", rule: m(14, 990, 3), shopRule: m(14, 400, 3) },
   { id: "de-watches", label: "Wristwatches, Pocket & Collector Watches", group: "Fashion", rule: m(11, 990, 3), shopRule: m(11, 400, 3) },
-  { id: "de-devices", label: "Electronics: computers, phones, cameras, TV & audio, consoles, appliances (Geräte)", group: "Electronics", rule: m(7), usedRate: 5 },
+  { id: "de-devices", label: "Electronics: computers, phones, cameras, TV & audio, consoles, appliances, electric shavers (Geräte)", group: "Electronics", rule: m(7), usedRate: 5 },
   { id: "de-accessories", label: "Electronics accessories: phone, camera, PC, TV & audio (Zubehör)", group: "Electronics", rule: m(12), usedRate: 5 },
   { id: "de-standard", label: "Sport, Baby, Pets, Furniture & Home, Crafts, Travel, Food, Misc.", group: "Home & sport", rule: m(14), usedRate: 5 },
   { id: "de-garden", label: "Garden & Patio, DIY (Heimwerker)", group: "Home & sport", rule: m(13), usedRate: 5 },
@@ -429,9 +432,11 @@ const S = {
   plNews: "ebay-pl-2026",
   usPayout: "ebay-us-payouts",
   us2025: "ebay-us-2025",
+  july2026: "ebay-2026-07-notice",
   ukPrivate: "ebay-uk-private",
   ukBusiness: "ebay-uk-business",
   ukBp: "ebay-uk-buyer-protection",
+  ukBpHelp: "ebay-uk-buyer-protection-fee",
   ukBpNews: "ebay-uk-buyer-protection-news",
   ukRate: "ebay-uk-2026",
   ukEis: "ebay-uk-eis",
@@ -464,18 +469,26 @@ const sources: Source[] = [
   {
     id: S.plNews,
     title: "Seller Announcement: Updates to eBay’s Promoted Listings are coming soon",
-    url: "https://community.ebay.com/t5/Announcements/Seller-Announcement-Updates-to-eBay-s-Promoted-Listings-are/ba-p/35311118",
+    url: "https://community.ebay.com/forum/announcements-57928/topic/seller-announcement-updates-to-ebays-promoted-listings-are-coming-soon-8506/",
     publisher: "eBay Community (official announcement)",
     checked: C,
   },
   { id: S.usPayout, title: "Getting paid for items you've sold", url: "https://www.ebay.com/help/fees-billing/payouts-payments-paid/get-paid-managed-payments-seller?id=4814", publisher: "eBay", checked: C },
   { id: S.us2025, title: "Final value fee changes", url: "https://www.ebay.com/sellercenter/resources/seller-updates/2025-january/final-value-fee", publisher: "eBay Seller Center", checked: C },
+  {
+    id: S.july2026,
+    title: "Changes to selling fees on selected eBay marketplaces",
+    url: "https://export.ebay.com/en/fees-regulations-policies/ebay-policies/changes-to-selling-fees-on-selected-ebay-marketplaces/",
+    publisher: "eBay Export",
+    checked: C,
+  },
   { id: S.ukPrivate, title: "Fees for private sellers", url: "https://www.ebay.co.uk/help/selling/fees-credits-invoices/selling-fees?id=4822", publisher: "eBay UK", checked: C },
   { id: S.ukBusiness, title: "Fees for business sellers", url: "https://www.ebay.co.uk/help/selling/fees-credits-invoices/fees-business-sellers?id=4809", publisher: "eBay UK", checked: C },
-  { id: S.ukBp, title: "Introducing Buyer Protection", url: "https://pages.ebay.co.uk/buyerprotection/", publisher: "eBay UK", checked: C },
+  { id: S.ukBp, title: "The best place to buy and sell (Buyer Protection)", url: "https://pages.ebay.co.uk/buyerprotection/", publisher: "eBay UK", checked: C },
+  { id: S.ukBpHelp, title: "Buyer Protection fee", url: "https://www.ebay.co.uk/help/buying/paying-items/buyer-protection?id=5594", publisher: "eBay UK", checked: C },
   { id: S.ukBpNews, title: "Buyer protection", url: "https://www.ebay.co.uk/sellercentre/news/2025-january/buyer-protection", publisher: "eBay UK Seller Centre", checked: C },
   { id: S.ukRate, title: "Rate Card Change", url: "https://www.ebay.co.uk/sellercentre/news/2026-january/rate-card-change", publisher: "eBay UK Seller Centre", checked: C },
-  { id: S.ukEis, title: "eBay International Shipping", url: "https://www.ebay.co.uk/sellercentre/postage/ebay-international-shipping", publisher: "eBay UK Seller Centre", checked: C },
+  { id: S.ukEis, title: "eBay International Shipping (eIS)", url: "https://www.ebay.co.uk/sellercentre/postage/ebay-international-shipping", publisher: "eBay UK Seller Centre", checked: C },
   { id: S.ukRof, title: "Seller Fees", url: "https://www.ebay.co.uk/sellercentre/selling/start-selling/fees", publisher: "eBay UK Seller Centre", checked: C },
   { id: S.ukFree, title: "Start cashing in on your past loves", url: "https://pages.ebay.co.uk/selling-on-ebay/", publisher: "eBay UK", checked: C },
   { id: S.ukPl, title: "General campaign strategy", url: "https://www.ebay.co.uk/help/selling/listings/listing-tips/promoted-listings?id=4164", publisher: "eBay UK", checked: C },
@@ -486,12 +499,12 @@ const sources: Source[] = [
   { id: S.caPl, title: "General campaign strategy", url: "https://www.ebay.ca/help/selling/listings/listing-tips/promoted-listings?id=4164", publisher: "eBay Canada", checked: C },
   { id: S.au, title: "Selling fees without a Pro plan", url: "https://www.ebay.com.au/help/selling/fees-credits-invoices/selling-fees?id=4822", publisher: "eBay Australia", checked: C },
   { id: S.auPro, title: "eBay Pro selling fees", url: "https://www.ebay.com.au/help/selling/fees-credits-invoices/ebay-pro-selling-fees?id=4809", publisher: "eBay Australia", checked: C },
-  { id: S.auBp, title: "Introducing Buyer Protection", url: "https://pages.ebay.com.au/buyerprotection/", publisher: "eBay Australia", checked: C },
+  { id: S.auBp, title: "The best place to buy and sell (Buyer Protection)", url: "https://pages.ebay.com.au/buyerprotection/", publisher: "eBay Australia", checked: C },
   { id: S.auChanges, title: "Important changes to eBay selling", url: "https://pages.ebay.com.au/about-pro-subscription/", publisher: "eBay Australia", checked: C },
   { id: S.auPl, title: "General campaign strategy", url: "https://www.ebay.com.au/help/selling/listings/listing-tips/promoted-listings?id=4164", publisher: "eBay Australia", checked: C },
   { id: S.dePrivate, title: "Gebühren für private Verkäufer", url: "https://www.ebay.de/help/selling/fees-credits-invoices/gebhren-fr-private-verkufer?id=4822", publisher: "eBay Germany", checked: C },
   { id: S.deBusiness, title: "Gebühren für gewerbliche Verkäufer", url: "https://www.ebay.de/help/selling/fees-credits-invoices/shop-selling-fees?id=4809", publisher: "eBay Germany", checked: C },
-  { id: S.dePl, title: "Allgemeine Kampagnenstrategie", url: "https://www.ebay.de/help/selling/listings/listing-tips/promoted-listings?id=4164", publisher: "eBay Germany", checked: C },
+  { id: S.dePl, title: "Basis-Kampagnenstrategie", url: "https://www.ebay.de/help/selling/listings/listing-tips/promoted-listings?id=4164", publisher: "eBay Germany", checked: C },
 ];
 
 const changes: FeeChange[] = [
@@ -505,25 +518,34 @@ const changes: FeeChange[] = [
     source: S.us,
   },
   {
+    date: "2026-07-01",
+    text: "UK, Germany and Australia (from July 2026; eBay’s notice says dates vary by site): after four months in a row, UK surcharges rise to 7 points (Below Standard) and 5 points (‘not as described’), Australia’s to 6.6%; eBay.de business sellers pay 5% on used, refurbished and ‘new: other’ items in electronics, home, sport and other categories.",
+    source: S.july2026,
+  },
+  {
     date: "2026-05-12",
     text: "Australia: free selling for Australian sellers with up to AU$25,000 in sales over 12 months (buyers pay a Buyer Protection fee instead); Stores became Pro plans, and sellers above the limit move to Pro Starter at 13.4% + $0.30.",
     source: S.auChanges,
   },
   {
     date: "2026-02-12",
-    text: "UK business sellers: per-order fee on orders over £10 rose from £0.30 to £0.40; Business, Office & Industrial 11.9% → 12.5%; Vehicle Parts 8.9% → 9.5% up to £750 then 3%; Tyres, GPS and Power Tools thresholds moved to £750.",
+    text: "UK business sellers: per-order fee on orders over £10 rose from £0.30 to £0.40; Business, Office & Industrial 11.9% → 12.5%; Vehicle Parts 8.9% → 9.5% up to £750, then 3%; Tyres 7.9% up to £250 → 6.9% up to £750; GPS and Power Tools 6.9% threshold £400 → £750.",
     source: S.ukRate,
   },
   {
     date: "2026-01-13",
-    text: "Promoted Listings (general campaigns): an ad fee is now charged when the item sells within 30 days of any buyer’s click on the ad, at the ad rate in effect at the time of sale. Already the rule on eBay UK, Australia and Germany.",
+    text: "US and Canada, Promoted Listings (general campaigns): the ad fee is now charged when the item sells within 30 days of any buyer’s click on the ad (not only the buyer’s own click), at the ad rate in effect at the time of sale.",
     source: S.plNews,
   },
   { date: "2025-03-03", text: "Canada: final value fees up by as much as 0.35 points; most categories 13.25% → 13.6% without a store.", source: S.ca2025 },
   { date: "2025-02-14", text: "US: final value fees up by as much as 0.35 points; most categories 13.25% → 13.6% without a store and 12.35% → 12.7% with a Basic store or higher.", source: S.us2025 },
   { date: "2025-02-04", text: "UK: buyers start paying a Buyer Protection fee on items from UK private sellers.", source: S.ukBpNews },
   { date: "2024-10-01", text: "UK: private sellers stop paying final value fees and the regulatory operating fee (vehicles excepted).", source: S.ukFree },
-  { date: "2024-03-22", text: "Canada: per-order fee on orders over $10 rose from $0.30 to $0.40.", source: S.ca2024 },
+  {
+    date: "2024-03-22",
+    text: "Canada: per-order fee on orders over $10 rose from $0.30 to $0.40; trading cards 12.9% → 13.25% without a store and 12% → 12.35% with one; media 13.25% → 14.95%.",
+    source: S.ca2024,
+  },
 ];
 
 /* ------------------------------------------------------------------------------------------ */
@@ -553,11 +575,11 @@ function naStore(inputs: Inputs, market: Market) {
   return { id: table[id] ? id : "none", ...(table[id] ?? table.none) };
 }
 
-function categoryRule(inputs: Inputs, market: Market): { label: string; rule: Rule; usedRate?: number } {
+function categoryRule(inputs: Inputs, market: Market): { label: string; rule: Rule; usedRate?: number; tenPence?: boolean } {
   const id = str(inputs, "category");
   if (market.id === "uk") {
     const c = UK_CATEGORIES.find((x) => x.id === id) ?? UK_CATEGORIES[0];
-    return { label: c.label, rule: c.rule };
+    return { label: c.label, rule: c.rule, tenPence: c.tenPence };
   }
   if (market.id === "au") {
     const c = AU_CATEGORIES.find((x) => x.id === id) ?? AU_CATEGORIES.find((x) => x.id === "au-home")!;
@@ -704,9 +726,12 @@ function calculate(inputs: Inputs, market: Market) {
         fixed = roundCents(p.perOrder * gst);
         explain = `${p.label} charges ${money(p.perOrder)} per order (GST included), however many items the buyer buys at one checkout.`;
       } else {
-        const [low, high] = id === "de" ? [35, 45] : [30, 40];
+        const tenPence = r === "uk-business" && Boolean(c.tenPence);
+        const [low, high] = id === "de" ? [35, 45] : [tenPence ? 10 : 30, 40];
         fixed = total <= 1000 ? low : high;
-        explain = `${money(low)} for orders of ${money(1000)} or less, ${money(high)} above, once per order (all items one buyer pays for at one checkout with the same shipping method). We count the order total including shipping${id === "us" || id === "ca" ? " and tax" : ""}.`;
+        explain = `${money(low)} for orders of ${money(1000)} or less, ${money(high)} above, once per order (all items one buyer pays for at one checkout with the same shipping method). We count the order total including shipping${id === "us" || id === "ca" ? " and tax" : ""}.${
+          tenPence ? " Home, Furniture & DIY listings created since 19 April 2022 pay 10p instead of 30p on orders up to £10." : r === "uk-business" ? " Some Collectables listings pay 10p instead of 30p on orders up to £10." : ""
+        }`;
       }
       if (noPerOrder) {
         fees.push({ id: "perorder", label: "Per-order fee", amount: 0, kind: "platform", detail: "Not charged", explain: "eBay doesn’t charge the per-order fee on athletic shoes when the total sale is $150 or more.", source: src });
@@ -739,7 +764,7 @@ function calculate(inputs: Inputs, market: Market) {
       amount: pct(total, 0.35),
       kind: "platform",
       detail: `0.35% × ${money(total)}`,
-      explain: "A fee eBay charges UK business sellers to cover regulatory costs: 0.35% (plus VAT) of the item price and postage. It isn’t a government tax.",
+      explain: "A fee eBay charges UK business sellers to cover regulatory costs: 0.35% (plus VAT) of the total sale, meaning item price, postage and any taxes. It isn’t a government tax.",
       source: S.ukBusiness,
     });
   }
@@ -832,7 +857,7 @@ function calculate(inputs: Inputs, market: Market) {
       amount: pct(total, adRate),
       kind: "ads",
       detail: `${formatRate(adRate)} × ${money(total)}`,
-      explain: `General campaigns charge your ad rate on the total sale, ${id === "us" || id === "ca" ? "shipping and sales tax included" : "postage and taxes included"}, when the item sells within 30 days of any buyer’s click on the ad, at the rate in effect when it sells.${id === "uk" || id === "au" || id === "de" ? ` eBay may add ${id === "au" ? "GST" : "VAT"} to ad fees.` : ""}`,
+      explain: `General campaigns charge your ad rate on the total sale, ${id === "us" || id === "ca" ? "shipping and sales tax included" : "postage and taxes included"}, when the item sells within 30 days of ${id === "us" || id === "ca" || id === "au" ? "any buyer’s click on the ad" : "a click on the ad"}, at the rate in effect when it sells.${id === "uk" || id === "au" ? ` eBay may add ${id === "au" ? "GST" : "VAT"} to ad fees.` : ""}`,
       source: ({ us: S.usPl, ca: S.caPl, uk: S.ukPl, au: S.auPl, de: S.dePl } as Record<string, string>)[id] ?? S.usPl,
     });
   }
@@ -914,9 +939,9 @@ function calculate(inputs: Inputs, market: Market) {
       detail: `${bp.parts.map(([rate, slice]) => `${formatRate(rate)} × ${money(slice)}`).join(" + ")} + ${money(bp.flat)}`,
       explain:
         id === "uk"
-          ? "Added to your price for the buyer, not taken from you: £0.10 per item plus 7% of the item price up to £20, 4% from £20 to £300 and 2% from £300 to £4,000. Not charged on postage. VAT included."
+          ? "Added to your price for the buyer, not taken from you: £0.10 per item plus 7% of the item price up to £20, 4% from £20 to £300 and 2% from £300 to £4,000. Not charged on postage. UK VAT included."
           : "Added to your price for the buyer, not taken from you: AU$0.30 per item plus 8% of the item price up to $20, 6% from $20 to $500 and 4% from $500 to $5,000. Not charged on postage. GST included.",
-      source: id === "uk" ? S.ukBp : S.auBp,
+      source: id === "uk" ? S.ukBpHelp : S.auBp,
     });
   }
 
@@ -925,7 +950,10 @@ function calculate(inputs: Inputs, market: Market) {
   if (r === "au-free") notes.push("Free selling needs an Australian address, no Pro plan and AU$25,000 or less in eBay sales (incl. postage and tax) over the last 12 full months; above that eBay moves you to Pro Starter (13.4% + $0.30).");
   if (r === "de-business") notes.push("Rates are for sellers rated Above Standard or Top Rated. Below Standard sellers pay a separate, higher rate card on eBay.de.");
   if (id === "us" && !taxRate(inputs, market)) notes.push("eBay also takes its percentage of the sales tax the buyer pays. Add the buyer’s tax rate for the exact fee.");
-  if (!adRate && r !== "de-private") notes.push("Promoting this listing? Add your ad rate: it’s charged on the whole sale, shipping and tax included, if anyone clicked the ad in the 30 days before it sold.");
+  if (!adRate && r !== "de-private")
+    notes.push(
+      `Promoting this listing? Add your ad rate: it’s charged on the whole sale, ${id === "us" || id === "ca" ? "shipping and tax" : "postage and taxes"} included, if ${id === "us" || id === "ca" || id === "au" ? "any buyer" : "someone"} clicked the ad in the 30 days before it sold.`,
+    );
 
   return assemble({
     market,
@@ -987,14 +1015,14 @@ function schedule(market: Market): ScheduleRow[] {
   switch (market.id) {
     case "uk":
       return [
-        { fee: "Final value fee", amount: "None", appliesTo: "—", when: "UK private sellers (not vehicles)", source: S.ukPrivate },
-        { fee: "Buyer Protection fee (buyer pays)", amount: "£0.10 + 7% to £20, 4% to £300, 2% to £4,000", appliesTo: "Item price, per item", when: "Items from UK private sellers", source: S.ukBp },
-        { fee: "International fee", amount: "3% (incl. VAT)", appliesTo: "Item + postage + taxes", when: "Private sellers, buyer outside the UK", source: S.ukPrivate },
-        { fee: "Listing fee", amount: "300 free a month, then 35p", appliesTo: "Each new listing", when: "Private sellers", source: S.ukPrivate },
-        { fee: "Final value fee", amount: "9.9%–14.9% by category (5% NFTs), lower rate above some thresholds", appliesTo: "Item + postage + taxes, per item", when: "Business sellers, + VAT", source: S.ukBusiness },
-        { fee: "Per-order fee", amount: "£0.30 (orders ≤ £10) / £0.40", appliesTo: "Each order", when: "Business sellers", source: S.ukBusiness },
+        { fee: "Final value fee: private sellers", amount: "None", appliesTo: "—", when: "UK-based private sellers (not vehicles)", source: S.ukPrivate },
+        { fee: "Buyer Protection fee (buyer pays)", amount: "£0.10 + 7% to £20, 4% to £300, 2% to £4,000 (incl. VAT)", appliesTo: "Item price, per item", when: "Items from UK private sellers", source: S.ukBpHelp },
+        { fee: "International fee: private sellers", amount: "3% (incl. VAT)", appliesTo: "Item + handling + postage + taxes", when: "Delivery address outside the UK", source: S.ukPrivate },
+        { fee: "Listing fee: private sellers", amount: "300 free a month, then 35p", appliesTo: "Each new listing", when: "Over 300 listings a month", source: S.ukPrivate },
+        { fee: "Final value fee: business sellers", amount: "6.9%–14.9% by category (5% NFTs), lower rate above some thresholds", appliesTo: "Item + postage + taxes, per item", when: "Plus VAT", source: S.ukBusiness },
+        { fee: "Per-order fee: business sellers", amount: "£0.30 (orders ≤ £10) / £0.40; 10p ≤ £10 in Home, Furniture & DIY", appliesTo: "Each order", when: "Plus VAT", source: S.ukBusiness },
         { fee: "Regulatory operating fee", amount: "0.35%", appliesTo: "Item + postage + taxes", when: "Business sellers", source: S.ukBusiness },
-        { fee: "International fee", amount: "1.05% eurozone & Nordics / 1.8% US & Canada / 2% elsewhere", appliesTo: "Item + handling + postage + taxes", when: "Business sellers; not on eBay International Shipping", source: S.ukBusiness },
+        { fee: "International fee: business sellers", amount: "1.05% eurozone & Nordics / 1.8% US & Canada / 2% elsewhere", appliesTo: "Item + handling + postage + taxes", when: "Not on eBay International Shipping orders", source: S.ukBusiness },
         { fee: "Below Standard surcharge", amount: "+6 points (+7 after 4 months)", appliesTo: "Total sale", when: "Business sellers rated Below Standard", source: S.ukBusiness },
         { fee: "‘Not as described’ surcharge", amount: "+4 points (+5 after 4 months)", appliesTo: "Total sale", when: "Very High rate in that category", source: S.ukBusiness },
         { fee: "Promoted Listings (general)", amount: "2%–100%, you choose", appliesTo: "Total sale incl. postage and taxes", when: "Sold within 30 days of an ad click", source: S.ukPl },
@@ -1004,7 +1032,7 @@ function schedule(market: Market): ScheduleRow[] {
       ];
     case "au":
       return [
-        { fee: "Final value fee", amount: "None", appliesTo: "—", when: "No Pro plan, ≤ AU$25,000 sales in 12 months", source: S.au },
+        { fee: "Final value fee: free selling", amount: "None", appliesTo: "—", when: "No Pro plan, ≤ AU$25,000 sales in 12 months", source: S.au },
         { fee: "Buyer Protection fee (buyer pays)", amount: "$0.30 + 8% to $20, 6% to $500, 4% to $5,000", appliesTo: "Item price, per item", when: "Items from sellers without Pro", source: S.auBp },
         { fee: "International fee", amount: "3% (no Pro) / 1.1% (Pro)", appliesTo: "Total sale", when: "Delivery outside Australia", source: S.au },
         { fee: "Pro Starter", amount: "13.4% to $4,000, then 2.5%, + $0.30 per order", appliesTo: "Total sale incl. postage, per item", when: "Automatic above $25,000; no monthly fee", source: S.auPro },
@@ -1017,19 +1045,19 @@ function schedule(market: Market): ScheduleRow[] {
       ];
     case "de":
       return [
-        { fee: "Final value fee", amount: "None", appliesTo: "—", when: "Private sellers, sales within Germany", source: S.dePrivate },
-        { fee: "International fee", amount: "5% (none with eBay International Shipping)", appliesTo: "Everything the buyer pays", when: "Private sellers shipping abroad themselves", source: S.dePrivate },
-        { fee: "Final value fee", amount: "5%–16% by category and condition, 3% above €990 in many", appliesTo: "Total sale incl. postage and VAT", when: "Business sellers, + VAT", source: S.deBusiness },
-        { fee: "Per-order fee", amount: "€0.35 (orders ≤ €10) / €0.45", appliesTo: "Each order", when: "Business sellers", source: S.deBusiness },
-        { fee: "International fee", amount: "Free eurozone & Sweden / 1.6% rest of Europe, US, Canada / 1.2% UK / 3.3% elsewhere", appliesTo: "Total sale", when: "Business sellers; not on eBay International Shipping", source: S.deBusiness },
+        { fee: "Final value fee: private sellers", amount: "None", appliesTo: "—", when: "Sales within Germany", source: S.dePrivate },
+        { fee: "International fee: private sellers", amount: "5% (none with eBay International Shipping)", appliesTo: "Everything the buyer pays", when: "You ship abroad yourself", source: S.dePrivate },
+        { fee: "Final value fee: business sellers", amount: "5%–16% by category and condition, 3% above €990 in many", appliesTo: "Total sale incl. postage and VAT", when: "Above Standard / Top Rated; plus VAT", source: S.deBusiness },
+        { fee: "Per-order fee: business sellers", amount: "€0.35 (orders ≤ €10) / €0.45", appliesTo: "Each order", when: "Plus VAT", source: S.deBusiness },
+        { fee: "International fee: business sellers", amount: "Free eurozone & Sweden / 1.6% rest of Europe, US, Canada / 1.2% UK / 3.3% elsewhere", appliesTo: "Total sale", when: "Not on eBay International Shipping orders", source: S.deBusiness },
         { fee: "eBay Shop", amount: "€39.95 / €79.95 / €299.95 / €4,999.95 a month", appliesTo: "Basis / Top / Premium / Platin", when: "Platin: 10% off final value fees", source: S.deBusiness },
         { fee: "Promoted Listings (general)", amount: "2%–100%, you choose", appliesTo: "Total sale incl. postage and taxes", when: "Sold within 30 days of an ad click", source: S.dePl },
         { fee: "Currency conversion", amount: `${formatRate(conversionRate("de"))}${conversionRate("de") < 3.25 ? " (3.25% from 2 Dec 2026)" : ""}`, appliesTo: "Converted amount", when: "Only when eBay converts your funds", source: S.deBusiness },
       ];
     case "ca":
       return [
-        { fee: "Final value fee", amount: "13.6% up to $7,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, no store", source: S.ca },
-        { fee: "Final value fee", amount: "12.7% up to $2,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, Basic store or higher", source: S.caStore },
+        { fee: "Final value fee: no store", amount: "13.6% up to $7,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories", source: S.ca },
+        { fee: "Final value fee: with a store", amount: "12.7% up to $2,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, Basic store or higher", source: S.caStore },
         { fee: "Other categories", amount: "5%–15.3% (electronics 7.35%–9.35% with a store)", appliesTo: "Same", when: "Books, cards, coins, sneakers, guitars…", source: S.caStore },
         { fee: "Per-order fee", amount: "$0.30 (orders ≤ $10) / $0.40", appliesTo: "Each order", when: "Not on sneakers $150+", source: S.ca },
         { fee: "International fee", amount: "0.4% US / 1% elsewhere", appliesTo: "Total sale", when: "Not on eBay International Shipping", source: S.ca },
@@ -1042,8 +1070,8 @@ function schedule(market: Market): ScheduleRow[] {
       ];
     default:
       return [
-        { fee: "Final value fee", amount: "13.6% up to $7,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, no store or Starter store", source: S.us },
-        { fee: "Final value fee", amount: "12.7% up to $2,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, Basic store or higher", source: S.usStore },
+        { fee: "Final value fee: no store", amount: "13.6% up to $7,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, no store or Starter store", source: S.us },
+        { fee: "Final value fee: with a store", amount: "12.7% up to $2,500, then 2.35%", appliesTo: "Item + shipping + sales tax, per item", when: "Most categories, Basic store or higher", source: S.usStore },
         { fee: "Books, movies & music", amount: "15.3%", appliesTo: "Same", when: "Up to $7,500 (no store) / $2,500 (store)", source: S.us },
         { fee: "Electronics with a store", amount: "7.35%–9.35% (12.7% accessories)", appliesTo: "Same", when: "Basic store or higher; 13.6% without", source: S.usStore },
         { fee: "Sneakers $150+", amount: "8% (7% with a store), no per-order fee", appliesTo: "Same", when: "Athletic shoes", source: S.us },
@@ -1212,17 +1240,19 @@ export const ebay: CalculatorDef = {
       kind: "segmented",
       label: "Where is the buyer?",
       section: "shipping",
+      advanced: true,
       options: [
         { value: "domestic", label: "Same country" },
         { value: "abroad", label: "Abroad" },
       ],
-      help: "International orders add an international fee unless you use eBay International Shipping.",
+      help: "Abroad means a delivery address outside your country (US and Canada: also a buyer registered abroad). It adds an international fee unless the order goes through eBay International Shipping.",
     },
     {
       id: "intlRegionUk",
       kind: "segmented",
       label: "Buyer’s region",
       section: "shipping",
+      advanced: true,
       options: [
         { value: "eu", label: "Eurozone / Nordics" },
         { value: "usca", label: "US / Canada" },
@@ -1235,6 +1265,7 @@ export const ebay: CalculatorDef = {
       kind: "segmented",
       label: "Buyer’s country",
       section: "shipping",
+      advanced: true,
       options: [
         { value: "us", label: "United States" },
         { value: "other", label: "Elsewhere" },
@@ -1246,6 +1277,7 @@ export const ebay: CalculatorDef = {
       kind: "select",
       label: "Buyer’s region",
       section: "shipping",
+      advanced: true,
       options: [
         { value: "eu", label: "Eurozone or Sweden", hint: "free" },
         { value: "europe", label: "Rest of Europe, US or Canada", hint: "1.6%" },
@@ -1259,6 +1291,7 @@ export const ebay: CalculatorDef = {
       kind: "toggle",
       label: "Shipped with eBay International Shipping",
       section: "shipping",
+      advanced: true,
       help: "No international fee on eligible items; enter only the domestic postage the buyer pays you above.",
       showIf: (i, m) => abroad(i) && (isNa(m) || m.id === "de" || regime(i, m) === "uk-business"),
     },

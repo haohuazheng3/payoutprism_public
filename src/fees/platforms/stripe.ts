@@ -40,7 +40,10 @@ export function auIntlRate(at: number = Date.now()): number {
   return at >= Date.UTC(2027, 2, 31, 13, 0) ? 2.8 : 3.5;
 }
 
-/** Accounts that used Radar before 2026-07-29 have a free Radar Standard (or Plus) trial until 2027-01-22. */
+/**
+ * Accounts that used Radar before 2026-07-29 are on a free Radar Standard trial until 2027-01-22; accounts that used
+ * Radar for Fraud Teams were moved to Radar Plus and pay the new price from the same date (support page, Jan 2027).
+ */
 export function radarTrialActive(at: number = Date.now()): boolean {
   return at < Date.UTC(2027, 0, 22);
 }
@@ -69,22 +72,22 @@ const S = {
 
 const sources: Source[] = [
   { id: S.pricing.us, title: "Pricing & Fees", url: "https://stripe.com/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.pricing.uk, title: "Pricing & Fees (United Kingdom)", url: "https://stripe.com/gb/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.pricing.ca, title: "Pricing & Fees (Canada)", url: "https://stripe.com/en-ca/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.pricing.au, title: "Pricing & Fees (Australia)", url: "https://stripe.com/au/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.pricing.de, title: "Pricing & Fees (Germany)", url: "https://stripe.com/en-de/pricing", publisher: "Stripe", checked: "2026-10-23" },
+  { id: S.pricing.uk, title: "Pricing & Fees", url: "https://stripe.com/gb/pricing", publisher: "Stripe (United Kingdom)", checked: "2026-10-23" },
+  { id: S.pricing.ca, title: "Pricing & Fees", url: "https://stripe.com/en-ca/pricing", publisher: "Stripe (Canada)", checked: "2026-10-23" },
+  { id: S.pricing.au, title: "Pricing & Fees", url: "https://stripe.com/au/pricing", publisher: "Stripe (Australia)", checked: "2026-10-23" },
+  { id: S.pricing.de, title: "Pricing & Fees", url: "https://stripe.com/en-de/pricing", publisher: "Stripe (Germany)", checked: "2026-10-23" },
   { id: S.lpm.us, title: "Local payment methods pricing", url: "https://stripe.com/pricing/local-payment-methods", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.lpm.uk, title: "Local payment methods pricing (United Kingdom)", url: "https://stripe.com/gb/pricing/local-payment-methods", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.lpm.ca, title: "Local payment methods pricing (Canada)", url: "https://stripe.com/en-ca/pricing/local-payment-methods", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.lpm.au, title: "Local payment methods pricing (Australia)", url: "https://stripe.com/au/pricing/local-payment-methods", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.lpm.de, title: "Local payment methods pricing (Germany)", url: "https://stripe.com/en-de/pricing/local-payment-methods", publisher: "Stripe", checked: "2026-10-23" },
+  { id: S.lpm.uk, title: "Local payment methods pricing", url: "https://stripe.com/gb/pricing/local-payment-methods", publisher: "Stripe (United Kingdom)", checked: "2026-10-23" },
+  { id: S.lpm.ca, title: "Local payment methods pricing", url: "https://stripe.com/en-ca/pricing/local-payment-methods", publisher: "Stripe (Canada)", checked: "2026-10-23" },
+  { id: S.lpm.au, title: "Local payment methods pricing", url: "https://stripe.com/au/pricing/local-payment-methods", publisher: "Stripe (Australia)", checked: "2026-10-23" },
+  { id: S.lpm.de, title: "Local payment methods pricing", url: "https://stripe.com/en-de/pricing/local-payment-methods", publisher: "Stripe (Germany)", checked: "2026-10-23" },
   { id: S.radar.us, title: "Stripe Radar | Pricing and Fees", url: "https://stripe.com/radar/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.radar.uk, title: "Stripe Radar | Pricing and Fees (United Kingdom)", url: "https://stripe.com/gb/radar/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.radar.ca, title: "Stripe Radar | Pricing and Fees (Canada)", url: "https://stripe.com/en-ca/radar/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.radar.au, title: "Stripe Radar | Pricing and Fees (Australia)", url: "https://stripe.com/au/radar/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.radar.de, title: "Stripe Radar | Pricing and Fees (Germany)", url: "https://stripe.com/en-de/radar/pricing", publisher: "Stripe", checked: "2026-10-23" },
+  { id: S.radar.uk, title: "Stripe Radar | Pricing and Fees", url: "https://stripe.com/gb/radar/pricing", publisher: "Stripe (United Kingdom)", checked: "2026-10-23" },
+  { id: S.radar.ca, title: "Stripe Radar | Pricing and Fees", url: "https://stripe.com/en-ca/radar/pricing", publisher: "Stripe (Canada)", checked: "2026-10-23" },
+  { id: S.radar.au, title: "Stripe Radar | Pricing and Fees", url: "https://stripe.com/au/radar/pricing", publisher: "Stripe (Australia)", checked: "2026-10-23" },
+  { id: S.radar.de, title: "Stripe Radar | Pricing and Fees", url: "https://stripe.com/en-de/radar/pricing", publisher: "Stripe (Germany)", checked: "2026-10-23" },
   { id: S.billing, title: "Stripe Billing | Pricing", url: "https://stripe.com/billing/pricing", publisher: "Stripe", checked: "2026-10-23" },
-  { id: S.invoicing, title: "Invoicing pricing", url: "https://stripe.com/invoicing/pricing", publisher: "Stripe", checked: "2026-10-23" },
+  { id: S.invoicing, title: "Invoicing built for speed and scale", url: "https://stripe.com/invoicing/pricing", publisher: "Stripe", checked: "2026-10-23" },
   { id: S.tax, title: "Understanding Stripe Tax pricing", url: "https://support.stripe.com/questions/understanding-stripe-tax-pricing", publisher: "Stripe Support", checked: "2026-10-23" },
   { id: S.radar2027, title: "Updates to Radar pricing (January 2027)", url: "https://support.stripe.com/questions/updates-to-radar-pricing-(january-2027)", publisher: "Stripe Support", checked: "2026-10-23" },
   { id: S.disputes, title: "June 2025 pricing updates for disputes", url: "https://support.stripe.com/questions/june-2025-pricing-updates-for-disputes", publisher: "Stripe Support", checked: "2026-10-23" },
@@ -514,7 +517,13 @@ function calculate(inputs: Inputs, market: Market) {
       kind: "platform",
       detail: `${money(fee)} per screened payment`,
       explain: `${name} screens payments by every method for fraud and costs ${money(fee)} for each payment it screens.${
-        radarTrialActive(at) && radar !== "pro" ? ` If your account used Radar before July 29, 2026, this is free until January 22, 2027, then billed.` : ""
+        !radarTrialActive(at)
+          ? ""
+          : radar === "standard"
+            ? " If your account used Radar before July 29, 2026, this is free until January 22, 2027, then billed."
+            : radar === "plus"
+              ? " If Stripe moved your account here from Radar for Fraud Teams, this price applies from January 22, 2027."
+              : ""
       } Radar Lite (cards only) stays free.`,
       source: radarTrialActive(at) && radar !== "pro" ? S.radar2027 : S.radar[market.id] ?? S.radar.us,
     });
@@ -603,7 +612,13 @@ function calculate(inputs: Inputs, market: Market) {
   if (taxPart && procRate) {
     notes.push(`${money(taxPart)} of this payment is tax you pass on, and Stripe’s ${formatRate(procRate)} is charged on it too: ${money(pct(taxPart, procRate))} of the fee.`);
   }
-  if (dispute === "none" && processing) notes.push(`If you refund this payment, Stripe keeps its ${money(processing)} processing fee.`);
+  const fxFee = fees.find((l) => l.id === "fx")?.amount ?? 0;
+  if (dispute === "none" && processing)
+    notes.push(
+      fxFee
+        ? `If you refund this payment, Stripe keeps its ${money(processing)} processing fee and the ${money(fxFee)} conversion fee.`
+        : `If you refund this payment, Stripe keeps its ${money(processing)} processing fee.`,
+    );
   if (radar === "lite" && radarTrialActive(at))
     notes.push(`Used Radar before July 29, 2026? From January 22, 2027 Stripe charges ${money(cfg.radar.standard)} per screened payment (Radar Standard) unless you switch to the free Radar Lite.`);
   if (market.id === "ca" && saas.length)
@@ -725,7 +740,7 @@ const changes: FeeChange[] = [
   { date: "2027-04-01", text: "Australia: international card fees drop from 3.5% to 2.8% (+ A$0.30 online, + A$0.10 in person).", source: S.auCards, upcoming: true },
   {
     date: "2027-01-22",
-    text: "Radar billing starts for accounts that used Radar before July 29, 2026: Radar Standard $0.05 per screened payment in the US (£0.04 UK, CA$0.07, A$0.08, €0.05), Radar Plus $0.07, across all payment methods and subscription renewals. Switching to Radar Lite keeps fraud screening for cards free.",
+    text: "New Radar prices apply to accounts that used Radar before July 29, 2026: the free Radar Standard trial ends and each screened payment costs $0.05 in the US (£0.04 UK, CA$0.07, A$0.08, €0.05); former Radar for Fraud Teams accounts pay the Radar Plus price ($0.07 in the US). Renewals and every payment method are screened and billed. Switching to Radar Lite keeps fraud screening for cards free.",
     source: S.radar2027,
     upcoming: true,
   },
@@ -736,7 +751,7 @@ const changes: FeeChange[] = [
     text: "UK and EEA: by this date Stripe’s pricing pages listed premium (business) cards at 2.8% (was 1.9%) and international cards at 3.15% (was 3.25%). Stripe hasn’t published the date existing accounts move to the new rates.",
     source: S.pricing.uk,
   },
-  { date: "2026-07-29", text: "Radar split into Lite (free, cards only), Standard, Plus and Pro. Accounts already using Radar got a free Radar Standard trial until January 22, 2027.", source: S.radar2027 },
+  { date: "2026-07-29", text: "Radar split into Lite (free, cards only), Standard, Plus and Pro. Accounts already using Radar got a free Radar Standard trial until January 22, 2027; Radar for Fraud Teams accounts moved to Radar Plus.", source: S.radar2027 },
   { date: "2025-06-17", text: "New dispute countered fee: $15 in the US (£20 UK, CA$15, A$25, €20) when you respond to a dispute, returned if you win. The $15 dispute fee itself didn’t change.", source: S.disputes },
   { date: "2024-07-10", text: "Stripe Billing became one plan at 0.7% of Billing volume, replacing Starter (0.5%) and Scale (0.8%).", source: S.billing2024 },
 ];
@@ -803,7 +818,7 @@ export const stripe: CalculatorDef = {
     {
       id: "fx",
       kind: "toggle",
-      label: "Charging in a foreign currency",
+      label: "Does the customer pay in a foreign currency?",
       section: "sale",
       help: "Stripe adds 1% (2% outside the US) when it converts the payment to your payout currency.",
       showIf: (i, m) => Boolean(methodOf(i, m).fx),
@@ -878,6 +893,24 @@ export const stripe: CalculatorDef = {
       if (m.cap !== undefined) out.push(Math.ceil(((m.cap - fixed) * 100) / m.rate));
     }
     if (str(inputs, "product", "none") === "receipt") out.push(Math.ceil((fromUsd(200, market.currency) * 100) / 0.4));
+    const dispute = usesCard(m) ? str(inputs, "dispute", "none") : "none";
+    // A partly won dispute: above the amount the bank let you keep, every extra cent goes back to the cardholder.
+    if (dispute === "partial") out.push(toCents(num(inputs, "disputeWon")));
+    // Instant Payout: the minimum gives way to the percentage once rate × net reaches it (net rises with the price).
+    if (bool(inputs, "instantPayout") && dispute === "none") {
+      const ip = cfgFor(market).instant;
+      const netAt = (c: number) => calculate({ ...inputs, instantPayout: false, price: c / 100 }, market).payout;
+      let lo = 1;
+      let hi = 100_000_000;
+      if (pct(netAt(hi), ip.rate) >= ip.min) {
+        while (lo < hi) {
+          const mid = Math.floor((lo + hi) / 2);
+          if (pct(netAt(mid), ip.rate) >= ip.min) hi = mid;
+          else lo = mid + 1;
+        }
+        out.push(lo);
+      }
+    }
     return out.filter((b) => b > 0);
   },
   verifiedAt: "2026-10-23",
