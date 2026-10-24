@@ -15,7 +15,7 @@ export default instantTransfer({
   tiers: [{ id: "personal", label: "Personal", rate: 1.75, min: 25, max: 2500, rule: "1.75% of the amount, at least $0.25 and at most $25", source: "venmo-instant" }],
   standard: "Standard transfers to your bank are free and usually arrive in 1–3 business days.",
   standardSource: "venmo-fees",
-  instantWhere: "Instant transfers go to an eligible debit card or bank in about 30 minutes.",
+  instantWhere: "Instant transfers go to an eligible debit card or bank, typically within minutes.",
   limits: "A verified personal profile can move up to $5,000 per Instant Transfer; larger balances take several transfers, each with its own fee.",
   limitsSource: "venmo-instant",
   defaultAmount: 500,
