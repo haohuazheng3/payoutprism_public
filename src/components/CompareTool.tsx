@@ -33,8 +33,27 @@ export function CompareTool({
   const engine = useRef<null | ((g: Group, c: CompareInputs) => CompareRow[])>(null);
   const touched = useRef(false);
   const [ready, setReady] = useState(false);
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- marks hydration for monitoring and tests
-  useEffect(() => setReady(true), []);
+  const [pending, setPending] = useState(false);
+  const loader = useRef<Promise<(g: Group, c: CompareInputs) => CompareRow[]> | null>(null);
+  /** Fetch the fee engines once; started on idle and on the first touch so a change rarely waits. */
+  const loadEngine = () => {
+    if (!loader.current)
+      loader.current = Promise.all([import("@/fees/all"), import("@/fees/compare")]).then(([{ ALL }, { compareAll }]) => {
+        const fn = (g: Group, x: CompareInputs) => compareAll(ALL, g, x);
+        engine.current = fn;
+        return fn;
+      });
+    return loader.current;
+  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- marks hydration for monitoring and tests
+    setReady(true);
+    const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
+    const t = w.requestIdleCallback ? w.requestIdleCallback(() => void loadEngine()) : window.setTimeout(() => void loadEngine(), 2500);
+    return () => {
+      if (!w.requestIdleCallback) window.clearTimeout(t);
+    };
+  }, []);
 
   // Restore ?price=&shipping=&cost=&label=&group= (links from calculator pages). The URL can only be
   // read after hydration, so this one effect sets state on purpose.
@@ -57,12 +76,10 @@ export function CompareTool({
     if (!touched.current) return;
     let alive = true;
     const go = async () => {
-      if (!engine.current) {
-        const [{ ALL }, { compareAll }] = await Promise.all([import("@/fees/all"), import("@/fees/compare")]);
-        engine.current = (g, x) => compareAll(ALL, g, x);
-      }
+      const fn = engine.current ?? (await loadEngine());
       if (!alive) return;
-      setRows({ sell: engine.current("sell", c), pay: engine.current("pay", c) });
+      setRows({ sell: fn("sell", c), pay: fn("pay", c) });
+      setPending(false);
     };
     void go();
     if (!compact) {
@@ -82,6 +99,7 @@ export function CompareTool({
   const set = (k: keyof CompareInputs, v: number) => {
     if (!touched.current) track("compare_interact", { compact });
     touched.current = true;
+    if (!engine.current) setPending(true); // instant visual feedback while the engines arrive
     setC((prev) => ({ ...prev, [k]: v }));
   };
 
@@ -94,7 +112,7 @@ export function CompareTool({
 
   return (
     <div className={compact ? "" : "grid gap-5 lg:grid-cols-12 lg:items-start lg:gap-6"} data-ready={ready ? "1" : undefined}>
-      <div className={compact ? "min-w-0" : "float min-w-0 p-5 sm:p-7 lg:sticky lg:top-24 lg:col-span-4"}>
+      <div className={compact ? "min-w-0" : "float min-w-0 p-5 sm:p-7 lg:sticky lg:top-24 lg:col-span-4"} onFocusCapture={() => void loadEngine()}>
         {!compact && (
           <div className="segmented mb-6" role="tablist" aria-label="Compare">
             <button type="button" role="tab" aria-selected={group === "sell"} onClick={() => setGroup("sell")}>
@@ -161,7 +179,7 @@ export function CompareTool({
             {best.profit !== null ? " profit" : ""}.
           </p>
         )}
-        <ol className={compact ? "space-y-1.5" : "space-y-2.5"}>
+        <ol className={`${compact ? "space-y-1.5" : "space-y-2.5"} ${pending ? "pointer-events-none" : ""}`} aria-busy={pending} onPointerDown={() => void loadEngine()}>
           {shown.map((r, i) => (
             <li key={r.slug}>
               <Link
@@ -184,7 +202,7 @@ export function CompareTool({
                     ))}
                   </span>
                 )}
-                <span className="flex flex-none items-baseline gap-3 sm:w-[190px] sm:justify-end">
+                <span className={`flex flex-none items-baseline gap-3 sm:w-[190px] sm:justify-end ${pending ? "skeleton text-transparent" : ""}`}>
                   <span className="tnum text-[0.8rem] text-ink-3">
                     fees {money(r.totalFees)} · {(r.effectiveRate * 100).toFixed(1)}%
                   </span>
