@@ -22,8 +22,8 @@ export const BLOG_CATEGORIES: BlogCategory[] = [
   {
     slug: "payments",
     name: "Payments & payouts",
-    title: "Payment Processing Fees and Payouts, Explained",
-    description: "What PayPal, Stripe, Square, Venmo and Cash App charge to accept money and to move it to your bank, with worked examples.",
+    title: "Best Payment Apps for Getting Paid: Fees Compared",
+    description: "Venmo, PayPal, Cash App, Zelle, Square and Stripe compared on the fees that matter when you get paid: receiving, cashing out and selling.",
     intro: "Getting paid has its own fees: a percentage and a fixed amount per transaction, more for international cards and currency conversion, and sometimes a fee to withdraw. These guides compare them in real numbers.",
   },
   {
@@ -34,11 +34,11 @@ export const BLOG_CATEGORIES: BlogCategory[] = [
     intro: "A price that looks healthy can lose money once every fee is counted. These guides work backwards from the profit you want to the price to charge.",
   },
   {
-    slug: "comparisons",
-    name: "Platform comparisons",
-    title: "Selling Platform Fee Comparisons",
-    description: "Side-by-side fee comparisons of selling, payment and freelance platforms for the same sale.",
-    intro: "Where does the same sale leave you the most? These comparisons run identical numbers through each platform’s current fees.",
+    slug: "where-to-sell",
+    name: "Where to sell",
+    title: "Best Place to Sell Stuff Online: Fees and Payouts Compared",
+    description: "Where to sell clothes, cards, jewelry and more, with real payouts from the same calculators we use for every platform. Start with the category that matches your item.",
+    intro: "The best place to sell is the one that leaves the most money for your kind of item, at your price, with buyers who actually want it. Every guide here runs the same sale through each platform’s current fees.",
   },
   {
     slug: "fee-news",

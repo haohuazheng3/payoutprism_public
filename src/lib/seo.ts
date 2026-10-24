@@ -14,13 +14,15 @@ export function pageMetadata(input: {
   noindex?: boolean;
   type?: "website" | "article";
   absoluteTitle?: boolean;
+  /** hreflang alternates (path per language-region), for pages with a regional twin. */
+  languages?: Record<string, string>;
 }): Metadata {
   const url = absoluteUrl(input.path);
   const image = input.image ?? "/og/default";
   return {
     title: input.absoluteTitle ? { absolute: input.title } : input.title,
     description: input.description,
-    alternates: { canonical: url },
+    alternates: { canonical: url, ...(input.languages ? { languages: Object.fromEntries(Object.entries(input.languages).map(([k, v]) => [k, absoluteUrl(v)])) } : {}) },
     openGraph: {
       title: input.title,
       description: input.description,

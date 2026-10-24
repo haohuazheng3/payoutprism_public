@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   const { category } = await params;
   const cat = categoryBySlug(category);
   if (!cat) notFound();
-  return pageMetadata({ title: cat.title, description: cat.description, path: `/blog/${cat.slug}`, noindex: postsIn(cat.slug).length === 0 });
+  return pageMetadata({ title: cat.title, description: cat.description, path: `/blog/${cat.slug}`, absoluteTitle: true, noindex: postsIn(cat.slug).length === 0 });
 }
 
 export default async function Page({ params }: { params: Promise<{ category: string }> }) {

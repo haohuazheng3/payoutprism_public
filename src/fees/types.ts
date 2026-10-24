@@ -190,6 +190,16 @@ export interface CalculatorDef {
   costsHint?: string;
   /** Reverse-mode result heading, e.g. "Set your goal to". Defaults to "Charge this <priceNoun>". */
   reverseHead?: string;
+  /** Headline label when it isn't "You keep" (e.g. "Lands in your bank", "You pay in total"). */
+  keepHead?: string;
+  /** Which number the headline shows: the payout (default) or what the payer is charged in total. */
+  headline?: "payout" | "buyerPays";
+  /** Breakdown wording overrides for sender-side calculators. */
+  receiveLabel?: string;
+  /** Mode tab labels, or false to hide the reverse ("What to charge") mode where it means nothing. */
+  modes?: false | [forward: string, reverse: string];
+  buyerHead?: string;
+  buyerTotal?: string;
   markets: Market[];
   defaultMarket: string;
   fields: FieldDef[];

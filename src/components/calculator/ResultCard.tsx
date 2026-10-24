@@ -136,7 +136,7 @@ export function Breakdown({ def, result, market }: { def: CalculatorDef; result:
         </span>
       </div>
       <div className="mt-2 flex items-baseline justify-between text-[0.95rem]">
-        <span className="font-[600] text-ink">You receive</span>
+        <span className="font-[600] text-ink">{def.receiveLabel ?? "You receive"}</span>
         <span className="tnum font-[640] text-keep-text">{money(result.payout)}</span>
       </div>
 
@@ -159,14 +159,14 @@ export function Breakdown({ def, result, market }: { def: CalculatorDef; result:
 
       {result.buyerFees.length > 0 && (
         <div className="mt-4">
-          <div className="eyebrow mb-1">Your {buyerNoun(def)} also pays</div>
+          <div className="eyebrow mb-1">{def.buyerHead ?? `Your ${buyerNoun(def)} also pays`}</div>
           <ul className="divide-y divide-line">
             {result.buyerFees.map((l) => (
               <LineRow key={l.id} line={l} market={market} sign="+" sourceUrl={src(l.source)} />
             ))}
           </ul>
           <div className="mt-1 flex items-baseline justify-between border-t border-line pt-2.5 text-[0.9rem] text-ink-2">
-            <span>{cap(buyerNoun(def))}’s total</span>
+            <span>{def.buyerTotal ?? `${cap(buyerNoun(def))}’s total`}</span>
             <span className="tnum font-[560] text-ink">{money(result.buyerPays)}</span>
           </div>
         </div>

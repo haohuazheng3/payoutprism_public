@@ -1,9 +1,12 @@
 import Link from "next/link";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ReactNode } from "react";
 import type { CalculatorDef, Inputs } from "@/fees/types";
 import { pickMarket } from "@/fees/markets";
 import { formatMoney } from "@/fees/money";
 import { CATALOG } from "@/fees/catalog";
+import { getCalculator } from "@/fees/all";
 
 /*
  * Server-rendered building blocks for calculator articles. Every number they print is computed
@@ -263,4 +266,149 @@ export function CalcLink({ slug, children }: { slug: string; children?: ReactNod
       {children ?? `${c.name} fee calculator`}
     </Link>
   );
+}
+
+/** A local, pre-sized photo (Pexels) with its credit line. Lazy, fixed dimensions: no layout shift. */
+export function Figure({ src, alt, credit, creditUrl, w = 1200, h = 800, caption }: { src: string; alt: string; credit?: string; creditUrl?: string; w?: number; h?: number; caption?: string }) {
+  return (
+    <figure className="not-prose my-9">
+      {/* eslint-disable-next-line @next/next/no-img-element -- static local WebP, sized; next/image optimisation would bill per image */}
+      <img src={src} alt={alt} width={w} height={h} loading="lazy" decoding="async" className="h-auto w-full rounded-[22px] bg-card-2 object-cover" />
+      {(caption || credit) && (
+        <figcaption className="mt-2 text-[0.8rem] text-ink-4">
+          {caption}
+          {caption && credit ? " · " : ""}
+          {credit && (
+            <>
+              Photo:{" "}
+              {creditUrl ? (
+                <a href={creditUrl} target="_blank" rel="noopener noreferrer" className="link">
+                  {credit}
+                </a>
+              ) : (
+                credit
+              )}{" "}
+              / Pexels
+            </>
+          )}
+        </figcaption>
+      )}
+    </figure>
+  );
+}
+
+export interface ScenarioRow {
+  label: string;
+  /** Another calculator to run this row through (defaults to the page's own). */
+  slug?: string;
+  market?: string;
+  with?: Partial<Inputs>;
+  /** Run the same sale the compare page uses (price + shipping the buyer pays), mapped to this calculator’s own inputs. */
+  sale?: { price: number; shipping?: number; itemCost?: number };
+  note?: string;
+}
+
+/**
+ * The same engine, several situations side by side: plans, payment methods, platforms. Every
+ * number is computed at render time, so the table can't drift from the calculator.
+ */
+export function Scenarios({ def, rows, caption, head = "Scenario", buyer = false, sort = false, keep }: { def?: CalculatorDef; rows: ScenarioRow[]; caption?: string; head?: string; buyer?: boolean; sort?: boolean; keep?: string }) {
+  const computed = rows.map((row) => {
+    const d = row.slug ? getCalculator(row.slug) : def;
+    if (!d) throw new Error(`Scenarios: no calculator for row ${row.label}`);
+    const m = pickMarket(d.markets, row.market, d.defaultMarket);
+    const mapped = row.sale && d.compare ? d.compare.map({ price: row.sale.price, shipping: row.sale.shipping ?? 0, itemCost: row.sale.itemCost ?? 0, shippingCost: 0 }) : {};
+    const r = d.calculate({ ...d.defaults(m), ...mapped, ...row.with } as Inputs, m);
+    const money = (c: number) => formatMoney(c, m.currency, m.locale);
+    return { row, r, money, path: d.path };
+  });
+  if (sort) computed.sort((a, b) => (b.r.profit ?? b.r.payout) - (a.r.profit ?? a.r.payout));
+  const profit = computed.some((c) => c.r.profit !== null);
+  return (
+    <div className="float not-prose my-8 overflow-hidden">
+      {caption && <div className="px-5 pt-5 text-[0.92rem] text-ink-2 sm:px-6">{caption}</div>}
+      <div className="scroll-x mt-1">
+        <table className="data-table min-w-[520px]">
+          <thead>
+            <tr>
+              <th>{head}</th>
+              {buyer && <th className="num">They pay</th>}
+              <th className="num">Fees</th>
+              <th className="num">Fee rate</th>
+              <th className="num">{keep ?? (profit ? "Profit" : "You keep")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {computed.map(({ row, r, money, path }) => (
+              <tr key={row.label}>
+                <td>
+                  {row.slug ? (
+                    <Link href={path} className="link">
+                      {row.label}
+                    </Link>
+                  ) : (
+                    row.label
+                  )}
+                  {row.note && <span className="block text-[0.78rem] text-ink-4">{row.note}</span>}
+                </td>
+                {buyer && <td className="num">{money(r.buyerPays)}</td>}
+                <td className="num">{money(r.totalFees)}</td>
+                <td className="num">{rateText(r.effectiveRate)}</td>
+                <td className="num font-[600] text-ink">{money(r.profit ?? r.payout)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/** The B-page conclusion card: the answer in two sentences, then the buttons that act on it. */
+export function Verdict({ title = "Our verdict", children, links = [] }: { title?: string; children: ReactNode; links?: { slug?: string; href?: string; label: string }[] }) {
+  return (
+    <aside className="float not-prose my-8 border-l-4 border-keep px-5 py-5 sm:px-7 sm:py-6" aria-label={title}>
+      <div className="eyebrow mb-2">{title}</div>
+      <div className="text-[1.02rem] leading-relaxed text-ink [&_p]:my-1.5 [&_strong]:font-[650]">{children}</div>
+      {links.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {links.map((l, i) => {
+            const href = l.href ?? CATALOG.find((c) => c.slug === l.slug)?.path ?? "/compare";
+            return (
+              <Link key={href + l.label} href={href} className={i === 0 ? "btn btn-ink" : "btn btn-ghost"}>
+                {l.label}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+interface PhotoMeta {
+  n: number;
+  src: string;
+  photographer?: string;
+  photographerUrl?: string;
+}
+const photoCache = new Map<string, PhotoMeta[]>();
+function photoManifest(page: string): PhotoMeta[] {
+  if (!photoCache.has(page)) {
+    let list: PhotoMeta[] = [];
+    try {
+      list = JSON.parse(readFileSync(join(process.cwd(), "research", "images", `${page}.json`), "utf8")) as PhotoMeta[];
+    } catch {
+      list = [];
+    }
+    photoCache.set(page, list);
+  }
+  return photoCache.get(page) ?? [];
+}
+
+/** <Photo id="tcgplayer/1" alt="…" />: a photo from public/img with its Pexels credit filled in from the manifest. */
+export function Photo({ id, alt, caption }: { id: string; alt: string; caption?: string }) {
+  const [page, n] = id.split("/");
+  const meta = photoManifest(page).find((p) => String(p.n) === n);
+  return <Figure src={meta?.src ?? `/img/${page}/${n}.webp`} alt={alt} credit={meta?.photographer} creditUrl={meta?.photographerUrl} caption={caption} w={1200} h={800} />;
 }

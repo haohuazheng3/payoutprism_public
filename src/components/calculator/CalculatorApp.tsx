@@ -223,6 +223,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
       {/* ---------------- inputs ---------------- */}
       <div className="float min-w-0 p-5 sm:p-7 lg:col-span-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
+          {def.modes !== false ? (
           <div className="segmented w-full sm:w-auto" role="tablist" aria-label="What do you want to work out?">
             <button
               type="button"
@@ -234,7 +235,7 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
                 track("mode_switch", { calculator: def.slug, mode: "payout" });
               }}
             >
-              What I’ll keep
+              {def.modes ? def.modes[0] : "What I’ll keep"}
             </button>
             <button
               type="button"
@@ -247,9 +248,12 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
                 track("mode_switch", { calculator: def.slug, mode: "price" });
               }}
             >
-              What to charge
+              {def.modes ? def.modes[1] : "What to charge"}
             </button>
           </div>
+          ) : (
+            <span />
+          )}
           {def.markets.length > 1 && (
             <label className="relative inline-flex items-center">
               <span className="sr-only">Country / marketplace</span>
@@ -344,9 +348,9 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
         <div className="float p-5 sm:p-7" aria-live="polite" aria-atomic="false">
           {result ? (
             <>
-              <div className="eyebrow">{mode === "price" ? def.reverseHead ?? `Charge this ${def.priceNoun}` : result.profit !== null ? "Your profit" : "You keep"}</div>
+              <div className="eyebrow">{mode === "price" ? def.reverseHead ?? `Charge this ${def.priceNoun}` : result.profit !== null ? "Your profit" : def.keepHead ?? "You keep"}</div>
               <div className="mt-2 text-[3.1rem] leading-none text-ink sm:text-[3.6rem]">
-                <BigMoney cents={mode === "price" ? solved?.price ?? 0 : result.profit ?? result.payout} market={market} className={result.profit !== null && result.profit < 0 && mode !== "price" ? "text-bad" : ""} />
+                <BigMoney cents={mode === "price" ? solved?.price ?? 0 : def.headline === "buyerPays" ? result.buyerPays : result.profit ?? result.payout} market={market} className={result.profit !== null && result.profit < 0 && mode !== "price" ? "text-bad" : ""} />
               </div>
               <p className="tnum mt-3 text-[0.92rem] leading-snug text-ink-3">
                 {mode === "price" ? (
@@ -427,9 +431,9 @@ export function CalculatorApp({ def, compareHref }: { def: CalculatorDef; compar
           onClick={() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
         >
           <span className="min-w-0">
-            <span className="block text-[0.72rem] font-[600] uppercase tracking-[0.12em] text-ink-3">{mode === "price" ? "Charge" : result.profit !== null ? "Profit" : "You keep"}</span>
+            <span className="block text-[0.72rem] font-[600] uppercase tracking-[0.12em] text-ink-3">{mode === "price" ? "Charge" : result.profit !== null ? "Profit" : def.keepHead ?? "You keep"}</span>
             <span className="tnum block text-[1.35rem] font-[640] leading-tight text-ink">
-              {money(mode === "price" ? solved?.price ?? 0 : result.profit ?? result.payout)}
+              {money(mode === "price" ? solved?.price ?? 0 : def.headline === "buyerPays" ? result.buyerPays : result.profit ?? result.payout)}
             </span>
           </span>
           <span className="tnum text-right text-[0.8rem] leading-tight text-ink-3">

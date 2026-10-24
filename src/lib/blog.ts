@@ -22,6 +22,10 @@ export interface Post {
   keywords: string[];
   draft: boolean;
   faq: { q: string; a: string }[];
+  /** Official pages the numbers come from, listed under the article. */
+  sources: { title: string; url: string; publisher: string }[];
+  /** Calculator slugs to show as next steps. */
+  related: string[];
   body: string;
   readingMinutes: number;
   headings: { id: string; text: string }[];
@@ -75,6 +79,8 @@ function load(): Post[] {
         keywords: Array.isArray(data.keywords) ? data.keywords.map(String) : [],
         draft: data.draft === true,
         faq: Array.isArray(data.faq) ? data.faq.filter((f: { q?: unknown; a?: unknown }) => typeof f?.q === "string" && typeof f?.a === "string") : [],
+        sources: Array.isArray(data.sources) ? data.sources.filter((x: { title?: unknown; url?: unknown }) => typeof x?.title === "string" && typeof x?.url === "string").map((x: { title: string; url: string; publisher?: string }) => ({ title: x.title, url: x.url, publisher: String(x.publisher ?? "") })) : [],
+        related: Array.isArray(data.related) ? data.related.map(String) : [],
         body: content,
         readingMinutes: Math.max(1, Math.round(words / 230)),
         headings: extractHeadings(content),

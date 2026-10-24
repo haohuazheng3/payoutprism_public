@@ -31,9 +31,46 @@ import gofundme from "./platforms/gofundme";
 import kickstarter from "./platforms/kickstarter";
 import patreon from "./platforms/patreon";
 import gumroad from "./platforms/gumroad";
+import appStore from "./platforms/app-store";
+import appleCashInstantTransfer from "./platforms/apple-cash-instant-transfer";
+import bringATrailer from "./platforms/bring-a-trailer";
+import carsAndBids from "./platforms/cars-and-bids";
+import cashAppInstantTransfer from "./platforms/cash-app-instant-transfer";
+import chrono24 from "./platforms/chrono24";
+import clover from "./platforms/clover";
+import craftPricing from "./platforms/craft-pricing";
+import creditCardProcessing from "./platforms/credit-card-processing";
+import creditCardSurcharge from "./platforms/credit-card-surcharge";
+import ebayUk from "./platforms/ebay-uk";
+import etsyUk from "./platforms/etsy-uk";
+import eventbrite from "./platforms/eventbrite";
+import justgiving from "./platforms/justgiving";
+import kdp from "./platforms/kdp";
+import koFi from "./platforms/ko-fi";
+import paypalExchangeRate from "./platforms/paypal-exchange-rate";
+import paypalFriendsAndFamily from "./platforms/paypal-friends-and-family";
+import paypalGoodsAndServices from "./platforms/paypal-goods-and-services";
+import paypalInstantTransfer from "./platforms/paypal-instant-transfer";
+import paypalInvoice from "./platforms/paypal-invoice";
+import paypalUk from "./platforms/paypal-uk";
+import productPricing from "./platforms/product-pricing";
+import quickbooksPayments from "./platforms/quickbooks-payments";
+import rover from "./platforms/rover";
+import steamMarket from "./platforms/steam-market";
+import stripeUk from "./platforms/stripe-uk";
+import sumup from "./platforms/sumup";
+import tcgplayer from "./platforms/tcgplayer";
+import turo from "./platforms/turo";
+import turoPlans from "./platforms/turo-plans";
+import twitchBits from "./platforms/twitch-bits";
+import twitchSub from "./platforms/twitch-sub";
+import venmoCreditCard from "./platforms/venmo-credit-card";
+import venmoInstantTransfer from "./platforms/venmo-instant-transfer";
+import vrbo from "./platforms/vrbo";
+import wholesalePrice from "./platforms/wholesale-price";
 
 /** Every calculator, in the order menus list them (by how often people look for them). */
-export const ALL: CalculatorDef[] = [etsy, ebay, paypal, amazon, amazonFba, poshmark, mercari, stripe, venmo, cashApp, shopify, depop, stockx, square, whatnot, tiktokShop, facebookMarketplace, upwork, fiverr, airbnb, goat, walmart, grailed, reverb, vinted, offerup, swappa, gofundme, kickstarter, patreon, gumroad];
+export const ALL: CalculatorDef[] = [etsy, ebay, paypal, amazon, amazonFba, poshmark, mercari, stripe, venmo, cashApp, shopify, depop, stockx, square, whatnot, tiktokShop, facebookMarketplace, upwork, fiverr, airbnb, goat, walmart, grailed, reverb, vinted, offerup, swappa, gofundme, kickstarter, patreon, gumroad, appStore, appleCashInstantTransfer, bringATrailer, carsAndBids, cashAppInstantTransfer, chrono24, clover, craftPricing, creditCardProcessing, creditCardSurcharge, ebayUk, etsyUk, eventbrite, justgiving, kdp, koFi, paypalExchangeRate, paypalFriendsAndFamily, paypalGoodsAndServices, paypalInstantTransfer, paypalInvoice, paypalUk, productPricing, quickbooksPayments, rover, steamMarket, stripeUk, sumup, tcgplayer, turo, turoPlans, twitchBits, twitchSub, venmoCreditCard, venmoInstantTransfer, vrbo, wholesalePrice];
 
 export function getCalculator(slug: string): CalculatorDef {
   const def = ALL.find((d) => d.slug === slug);

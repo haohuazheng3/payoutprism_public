@@ -10,12 +10,13 @@ import { breadcrumbLd, calculatorLd, faqLd, pageMetadata } from "@/lib/seo";
 import { JsonLd } from "@/components/JsonLd";
 import { AdSlot } from "@/components/ads";
 import { RecentStrip } from "@/components/RecentStrip";
-import { Callout, CalcLink, ChangeLog, Example, FeeSchedule, MarketTable, PayoutExamples, SourceList } from "./content-blocks";
+import { Callout, CalcLink, ChangeLog, Example, FeeSchedule, Figure, MarketTable, PayoutExamples, Photo, Scenarios, SourceList, Verdict } from "./content-blocks";
+import { hreflangFor } from "@/lib/hreflang";
 
 export function calculatorMetadata(slug: string): Metadata {
   const def = getCalculator(slug);
   const { front } = loadCalcContent(slug);
-  return pageMetadata({ title: front.title, description: front.description, path: def.path, image: `/og/${slug}`, absoluteTitle: true });
+  return pageMetadata({ title: front.title, description: front.description, path: def.path, image: `/og/${slug}`, absoluteTitle: true, languages: hreflangFor(def.path) });
 }
 
 function formatDate(iso: string) {
@@ -34,6 +35,10 @@ export async function CalculatorPage({ slug, children }: { slug: string; childre
     Example: bind(Example),
     ChangeLog: bind(ChangeLog),
     SourceList: bind(SourceList),
+    Scenarios: bind(Scenarios),
+    Figure: Figure as unknown as MdxComponents[string],
+    Photo: Photo as unknown as MdxComponents[string],
+    Verdict: Verdict as unknown as MdxComponents[string],
     Callout: Callout as unknown as MdxComponents[string],
     CalcLink: CalcLink as unknown as MdxComponents[string],
   };
